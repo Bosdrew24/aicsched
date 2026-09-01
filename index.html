@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AICSchedule</title>
+  <link rel="stylesheet" href="style.css">
+    
+  <link rel="icon" type="image/jpeg" href="logo.jpg">
+  <link rel="apple-touch-icon" href="logo.jpg">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+</head>
+<body class="dark-mode">
+
+  <div class="topbar"></div>
+
+  <div class="wrap">
+    <!-- Top Navigation Header -->
+    <div class="nav-bar">
+      <span class="portal-tag" id="portal-tag-label">AICSchedule</span>
+      <div class="nav-actions">
+        <button class="notify-btn" id="notify-toggle-btn" style="display:inline-block;">🔔 Alerts</button>
+
+        <!-- Hamburger Container containing menu options -->
+        <div class="hamburger-container" id="hamburger-container">
+          <button class="hamburger-btn" id="hamburger-btn" aria-label="Menu">
+            <span class="bar"></span>
+            <span class="bar"></span>
+            <span class="bar"></span>
+          </button>
+          <div class="hamburger-menu" id="hamburger-menu">
+            <button class="menu-item" id="home-nav-btn" onclick="setView('home-view')">Home</button>
+            <button class="menu-item" id="student-nav-btn" onclick="openStudentLogin()">Student Portal</button>
+            <button class="menu-item" id="all-sections-nav-btn" onclick="viewAllSections()">All Sections</button>
+            <button class="menu-item" id="teacher-nav-btn" onclick="openTeacherLogin()">Teacher Portal</button>
+            <button class="menu-item" id="admin-nav-btn" onclick="openAdminModal()">Admin Portal</button>
+            <button class="menu-item" id="theme-toggle-btn">☀️ Light Mode</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HOME VIEW -->
+    <div id="home-view" class="view active">
+      <div class="about-section">
+        <h2>About Our System</h2>
+        <p>Welcome to the official Class Schedule Portal. This platform is designed to streamline academic schedule tracking for students and faculty members in real time.</p>
+        <p>Students can easily browse section rotations, rooms, and professors, while faculty members can select their name to view their personalized weekly schedule and receive automated class reminders.</p>
+      </div>
+      <div class="hero-container">
+        <h1 class="hero-title">Class Schedule Management System</h1>
+        <p class="hero-subtitle">Your centralized hub for tracking academic schedules and receiving real-time class alerts.</p>
+        <div class="portal-choices">
+          <button class="choice-card-btn" onclick="openStudentLogin()">Go to Student Portal</button>
+          <button class="choice-card-btn secondary" onclick="openTeacherLogin()">Go to Teacher Portal</button>
+          <button class="choice-card-btn admin" onclick="openAdminModal()">Go to Admin Portal</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- STUDENT VIEW -->
+    <div id="student-view" class="view">
+      <!-- Student Login Gate -->
+      <div id="student-gate-card" class="auth-gate-card" style="max-width:400px; margin:40px auto; padding:24px; background:#1e293b; border-radius:12px; border:1px solid #334155; text-align:center;">
+        <h2 style="color:#fff; margin-top:0;">Student Portal Access</h2>
+        <p style="color:#94a3b8; font-size:0.9rem; margin-bottom:20px;">Enter your section code to access your class schedule.</p>
+        <div style="margin-bottom:15px; text-align:left;">
+          <label style="color:#cbd5e1; font-size:0.85rem; font-weight:600; display:block; margin-bottom:6px;">Section Code:</label>
+          <input type="text" id="student-section-input" class="chrome-search-input" placeholder="e.g. BSIT 1A, BSCS 2B" style="width:100%; box-sizing:border-box;">
+        </div>
+        <button class="choice-card-btn" onclick="submitStudentLogin()" style="width:100%;">Enter Portal</button>
+      </div>
+
+      <!-- Student Schedule View (Shown after section entered) -->
+      <div id="student-main-content" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+          <span id="active-student-section-badge" style="background:#3b82f6; color:#fff; padding:4px 12px; border-radius:20px; font-weight:600; font-size:0.85rem;">Section: --</span>
+          <button onclick="logoutStudent()" style="background:none; border:1px solid #475569; color:#94a3b8; padding:4px 12px; border-radius:6px; cursor:pointer;">Switch Section</button>
+        </div>
+        <div class="schedule-header">
+          <div>
+            <h1 class="schedule-title">BS CLASS SCHEDULES</h1>
+            <div class="schedule-subtitle">1ST SEM 2026-2027</div>
+          </div>
+          <div class="chrome-search-container">
+            <div class="chrome-search-box" id="chrome-search-box">
+              <div class="chrome-input-wrapper">
+                <svg class="chrome-search-icon" viewBox="0 0 24 24">
+                  <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+                </svg>
+                <input type="text" id="student-search-input" class="chrome-search-input" placeholder="Search by section, subject, professor, or room" autocomplete="off">
+              </div>
+              <div class="chrome-dropdown" id="chrome-dropdown"></div>
+            </div>
+            <div class="search-meta" id="student-search-meta"></div>
+          </div>
+        </div>
+        <div class="session-filter-bar" id="session-filter-buttons">
+          <button class="session-filter-btn active" data-session="MORNING">Morning Session</button>
+          <button class="session-filter-btn" data-session="AFTERNOON">Afternoon Session</button>
+          <button class="session-filter-btn" data-session="EVENING">Evening Session</button>
+        </div>
+        <br>
+        <div class="mobile-day-tabs" id="mobile-day-tabs"></div>
+        <div id="sections-container" class="sections-list"></div>
+      </div>
+    </div>
+
+    <!-- TEACHER VIEW -->
+    <div id="teacher-view" class="view">
+      <!-- Teacher Login Gate -->
+      <div id="teacher-gate-card" class="auth-gate-card" style="max-width:400px; margin:40px auto; padding:24px; background:#1e293b; border-radius:12px; border:1px solid #334155; text-align:center;">
+        <h2 style="color:#fff; margin-top:0;">Faculty Portal Access</h2>
+        <p style="color:#94a3b8; font-size:0.9rem; margin-bottom:20px;">Select your faculty profile to view your teaching schedule.</p>
+        <div style="margin-bottom:20px; text-align:left;">
+          <label style="color:#cbd5e1; font-size:0.85rem; font-weight:600; display:block; margin-bottom:6px;">Faculty Name:</label>
+          <select id="teacher-name-select-gate" class="chrome-search-input" style="width:100%; box-sizing:border-box;">
+            <option value="">-- Select Your Name --</option>
+          </select>
+        </div>
+        <button class="choice-card-btn" onclick="submitTeacherLogin()" style="width:100%;">Access Schedule</button>
+      </div>
+
+      <!-- Teacher Schedule View (Shown after profile selected) -->
+      <div id="teacher-main-content" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+          <span id="active-teacher-badge" style="background:#10b981; color:#fff; padding:4px 12px; border-radius:20px; font-weight:600; font-size:0.85rem;">Faculty: --</span>
+          <button onclick="logoutTeacher()" style="background:none; border:1px solid #475569; color:#94a3b8; padding:4px 12px; border-radius:6px; cursor:pointer;">Switch Profile</button>
+        </div>
+        <div class="schedule-header">
+          <div>
+            <h1 class="schedule-title">FACULTY PORTAL</h1>
+            <div class="schedule-subtitle">Assigned class schedules</div>
+          </div>
+        </div>
+
+        <div id="teacher-schedule-container" class="sections-list"></div>
+      </div>
+    </div>
+
+  </div>
+<!-- ADMIN VIEW -->
+    <div id="admin-view" class="view">
+      <!-- Admin Login Gate -->
+      <div id="admin-gate-card" class="auth-gate-card" style="max-width:400px; margin:40px auto; padding:24px; background:#1e293b; border-radius:12px; border:1px solid #334155; text-align:center;">
+        <h2 style="color:#fff; margin-top:0;">Admin Portal Access</h2>
+        <p style="color:#94a3b8; font-size:0.9rem; margin-bottom:20px;">Enter administrative passcode to manage sections and schedules.</p>
+        <div style="margin-bottom:15px; text-align:left;">
+          <label style="color:#cbd5e1; font-size:0.85rem; font-weight:600; display:block; margin-bottom:6px;">Passcode:</label>
+          <input type="password" id="admin-view-pass-input" class="chrome-search-input" placeholder="Enter Admin Passcode" style="width:100%; box-sizing:border-box;">
+        </div>
+        <button class="choice-card-btn" onclick="submitAdminViewLogin()" style="width:100%;">Access Admin Panel</button>
+      </div>
+
+      <!-- Admin Main Content -->
+      <div id="admin-main-content" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+          <span style="background:#ef4444; color:#fff; padding:4px 12px; border-radius:20px; font-weight:600; font-size:0.85rem;">Mode: Administrator</span>
+          <button onclick="logoutAdmin()" style="background:none; border:1px solid #475569; color:#94a3b8; padding:4px 12px; border-radius:6px; cursor:pointer;">Exit Admin</button>
+        </div>
+
+        <div class="schedule-header" style="margin-bottom:20px;">
+          <div>
+            <h1 class="schedule-title">ADMIN MANAGEMENT</h1>
+            <div class="schedule-subtitle">Add or edit class sections and schedule allocations</div>
+          </div>
+        </div>
+
+        <!-- Add New Section Card -->
+        <div class="section-card" style="margin-bottom:24px; padding:20px; background:#1e293b; border-radius:12px; border:1px solid #334155;">
+          <h3 style="color:#38bdf8; margin-top:0; margin-bottom:15px;">➕ Add New Section</h3>
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:15px; margin-bottom:15px;">
+            <div>
+              <label style="color:#cbd5e1; font-size:0.85rem; font-weight:600; display:block; margin-bottom:6px;">Section Code:</label>
+              <input type="text" id="new-section-code" class="chrome-search-input" placeholder="e.g. BSIT 3A" style="width:100%; box-sizing:border-box;">
+            </div>
+            <div>
+              <label style="color:#cbd5e1; font-size:0.85rem; font-weight:600; display:block; margin-bottom:6px;">Title / Label:</label>
+              <input type="text" id="new-section-title" class="chrome-search-input" placeholder="e.g. BSIT 3A - Morning" style="width:100%; box-sizing:border-box;">
+            </div>
+            <div>
+              <label style="color:#cbd5e1; font-size:0.85rem; font-weight:600; display:block; margin-bottom:6px;">Session:</label>
+              <select id="new-section-session" class="chrome-search-input" style="width:100%; box-sizing:border-box;">
+                <option value="MORNING">MORNING</option>
+                <option value="AFTERNOON">AFTERNOON</option>
+                <option value="EVENING">EVENING</option>
+              </select>
+            </div>
+          </div>
+          <button class="choice-card-btn" onclick="addNewSection()" style="width:auto; padding:10px 20px;">Create Section</button>
+        </div>
+
+        <!-- Sections List for Editing -->
+        <div style="margin-bottom:15px;">
+          <h3 style="color:#f8fafc; margin-bottom:10px;">📋 Existing Sections</h3>
+        </div>
+        <div id="admin-sections-list"></div>
+      </div>
+    </div>
+
+  <!-- Modal Overlay for Subject Details View -->
+  <div class="overlay" id="subject-details-overlay">
+    <div class="details-card-modal">
+      <div class="details-card-header" id="subject-card-time">Monday · 7:00 - 8:00</div>
+      <div class="details-card-group">
+        <div class="details-card-label">Subject Code</div>
+        <div class="details-card-value bold" id="subject-card-code">CC112</div>
+      </div>
+      <div class="details-card-group">
+        <div class="details-card-label">Subject Name</div>
+        <div class="details-card-value" id="subject-card-name">—</div>
+      </div>
+      <div class="details-card-group">
+        <div class="details-card-label">Classroom</div>
+        <div class="details-card-value" id="subject-card-room">CL1</div>
+      </div>
+      <div class="details-card-group">
+        <div class="details-card-label">Professor</div>
+        <div class="details-card-value" id="subject-card-professor">X.Plata</div>
+      </div>
+      <div class="details-card-actions">
+        <button class="details-close-btn" id="subject-card-close-btn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin Verification Modal -->
+  <div class="overlay" id="admin-login-modal" style="display:none; justify-content:center; align-items:center;">
+    <div style="background:#1e293b; padding:24px; border-radius:12px; border:1px solid #334155; width:90%; max-width:380px;">
+      <h3 style="color:#fff; margin-top:0; font-size:1.2rem;">Admin Verification</h3>
+      <p style="color:#94a3b8; font-size:0.85rem; margin-bottom:15px;">Enter administrative passcode to enable edit mode across portals.</p>
+      <input type="password" id="admin-pass-input" class="chrome-search-input" placeholder="Enter Passcode" style="width:100%; box-sizing:border-box; margin-bottom:15px;">
+      <div style="display:flex; gap:10px;">
+        <button class="choice-card-btn" onclick="submitAdminLogin()" style="flex:1;">Login</button>
+        <button class="choice-card-btn secondary" onclick="closeAdminModal()" style="flex:1; background:#475569;">Cancel</button>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(reg => { window.swRegistration = reg; })
+          .catch(err => console.error('SW registration failed:', err));
+      });
+    }
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="script.js"></script>
+</body>
+</html>
