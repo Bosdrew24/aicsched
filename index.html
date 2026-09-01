@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AICSchedule</title>
   <link rel="stylesheet" href="style.css">
-  <link rel="manifest" href="manifest.json">  
+    
   <link rel="icon" type="image/jpeg" href="logo.jpg">
   <link rel="apple-touch-icon" href="logo.jpg">
   <link rel="manifest" href="manifest.json">
@@ -20,8 +20,6 @@
     <div class="nav-bar">
       <span class="portal-tag" id="portal-tag-label">AICSchedule</span>
       <div class="nav-actions">
-        <button class="notify-btn" id="notify-toggle-btn" style="display:inline-block;">🔔 Alerts</button>
-
         <!-- Hamburger Container containing menu options -->
         <div class="hamburger-container" id="hamburger-container">
           <button class="hamburger-btn" id="hamburger-btn" aria-label="Menu">
@@ -74,9 +72,12 @@
 
       <!-- Student Schedule View (Shown after section entered) -->
       <div id="student-main-content" style="display:none;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
           <span id="active-student-section-badge" style="background:#3b82f6; color:#fff; padding:4px 12px; border-radius:20px; font-weight:600; font-size:0.85rem;">Section: --</span>
-          <button onclick="logoutStudent()" style="background:none; border:1px solid #475569; color:#94a3b8; padding:4px 12px; border-radius:6px; cursor:pointer;">Switch Section</button>
+          <div style="display:flex; gap:10px; align-items:center;">
+            <button class="notify-btn" id="student-notify-btn" onclick="toggleNotifications()">🔕 Enable Phone Alerts</button>
+            <button onclick="logoutStudent()" style="background:none; border:1px solid #475569; color:#94a3b8; padding:4px 12px; border-radius:6px; cursor:pointer;">Switch Section</button>
+          </div>
         </div>
         <div class="schedule-header">
           <div>
@@ -112,8 +113,8 @@
       <!-- Teacher Login Gate -->
       <div id="teacher-gate-card" class="auth-gate-card" style="max-width:400px; margin:40px auto; padding:24px; background:#1e293b; border-radius:12px; border:1px solid #334155; text-align:center;">
         <h2 style="color:#fff; margin-top:0;">Faculty Portal Access</h2>
-        <p style="color:#94a3b8; font-size:0.9rem; margin-bottom:20px;">Select your faculty profile to view your teaching schedule.</p>
-        <div style="margin-bottom:20px; text-align:left;">
+        <p style="color:#94a3b8; font-size:0.9rem; margin-bottom:20px;">Search or select your faculty profile to view your teaching schedule.</p>
+        <div style="margin-bottom:20px; text-align:left; position:relative;">
           <label style="color:#cbd5e1; font-size:0.85rem; font-weight:600; display:block; margin-bottom:6px;">Faculty Name:</label>
           <select id="teacher-name-select-gate" class="chrome-search-input" style="width:100%; box-sizing:border-box;">
             <option value="">-- Select Your Name --</option>
@@ -124,9 +125,12 @@
 
       <!-- Teacher Schedule View (Shown after profile selected) -->
       <div id="teacher-main-content" style="display:none;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
           <span id="active-teacher-badge" style="background:#10b981; color:#fff; padding:4px 12px; border-radius:20px; font-weight:600; font-size:0.85rem;">Faculty: --</span>
-          <button onclick="logoutTeacher()" style="background:none; border:1px solid #475569; color:#94a3b8; padding:4px 12px; border-radius:6px; cursor:pointer;">Switch Profile</button>
+          <div style="display:flex; gap:10px; align-items:center;">
+            <button class="notify-btn" id="teacher-notify-btn" onclick="toggleNotifications()">🔕 Enable Phone Alerts</button>
+            <button onclick="logoutTeacher()" style="background:none; border:1px solid #475569; color:#94a3b8; padding:4px 12px; border-radius:6px; cursor:pointer;">Switch Profile</button>
+          </div>
         </div>
         <div class="schedule-header">
           <div>
@@ -139,8 +143,7 @@
       </div>
     </div>
 
-  </div>
-<!-- ADMIN VIEW -->
+    <!-- ADMIN VIEW -->
     <div id="admin-view" class="view">
       <!-- Admin Login Gate -->
       <div id="admin-gate-card" class="auth-gate-card" style="max-width:400px; margin:40px auto; padding:24px; background:#1e293b; border-radius:12px; border:1px solid #334155; text-align:center;">
@@ -198,6 +201,8 @@
         <div id="admin-sections-list"></div>
       </div>
     </div>
+
+  </div>
 
   <!-- Modal Overlay for Subject Details View -->
   <div class="overlay" id="subject-details-overlay">
