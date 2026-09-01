@@ -383,6 +383,53 @@ body {
   color: var(--text-main);
 }
 
+/* SEARCH & AUTOCOMPLETE DROPDOWN STYLES */
+.chrome-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  max-height: 200px;
+  overflow-y: auto;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  z-index: 10000;
+  padding: 6px;
+}
+
+.chrome-dropdown.active {
+  display: flex !important;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dropdown-item, .suggestion-item {
+  padding: 10px 14px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-main);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: var(--transition);
+  text-align: left;
+}
+
+.dropdown-item:hover, .suggestion-item:hover {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.dropdown-empty, .suggestion-empty {
+  padding: 10px 14px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-style: italic;
+  text-align: center;
+}
+
 .search-meta {
   font-size: 0.78rem;
   color: var(--text-muted);
@@ -839,4 +886,15 @@ body {
     max-width: 100%;
     width: 100%;
   }
+}
+/* Fix for invisible text inside select dropdown options */
+select option {
+  background-color: #0f172a; /* Dark background for dropdown menu items */
+  color: #f8fafc;            /* Readable light text for unselected options */
+}
+
+/* Light mode support */
+body.light-mode select option {
+  background-color: #ffffff;
+  color: #0f172a;
 }
