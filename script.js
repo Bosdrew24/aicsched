@@ -6,7 +6,7 @@ const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 // GLOBAL STATE & CONSTANTS
 const DAYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY ODL"];
 const DAYS_CLEAN = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
-const VAPID_PUBLIC_KEY = "BOJpCikmUaOrXF7VOE2JMZTVQQx4bef4yoNfcZ8TDJmrwFiSl4pZDwIX-KrlICr1eZo6fosEIO8Ycwayx4m-uIE";
+const VAPID_PUBLIC_KEY = "BOJpCikmUaOrXF7VOE2JMZTVQQx4bef4yoNfcZ8TDJmrwFiSl4pZDwIX-KrIICr1eZo6fosEIO8Ycwayx4m-ulE";
 
 let selectedDayIndex = 0;
 let activeSession = "MORNING";
@@ -16,27 +16,28 @@ let swRegistration = null;
 let notifiedClasses = new Set();
 window.adminSearchQuery = "";
 
-//--- NAVIGATION & VIEWS
+// NAVIGATION & VIEWS
 window.setView = function (viewId) {
   document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
   const target = document.getElementById(viewId);
   if (target) target.classList.add("active");
-  
+
   const homeBtn = document.getElementById("home-nav-btn");
   if (homeBtn) homeBtn.style.display = (viewId === "home-view") ? "none" : "inline-block";
-  
+
   const menu = document.getElementById("hamburger-menu");
   if (menu) menu.classList.remove("active");
-  
+
   if (viewId === "teacher-view") {
     checkTeacherAuth();
   } else if (viewId === "student-view") {
     checkStudentAuth();
   } else if (viewId === "admin-view") {
     checkAdminAuth();
-  } 
-  updateNotificationButtons();
+  }
 };
+
+updateNotificationButtons();
 
 // HAMBURGER MENU TOGGLE
 window.toggleHamburger = function (event) {
@@ -49,7 +50,7 @@ window.toggleHamburger = function (event) {
   }
 };
 
-//--- STUDENT PORTAL AUTH & SEPARATION LOGIC
+// STUDENT PORTAL AUTH & SEPARATION LOGIC
 function checkStudentAuth() {
   const savedSection = localStorage.getItem("aics_student_section");
   const gateCard = document.getElementById("student-gate-card");
@@ -62,7 +63,7 @@ function checkStudentAuth() {
   if (isViewingAllSections || savedSection) {
     if (gateCard) gateCard.style.display = "none";
     if (mainContent) mainContent.style.display = "block";
-    
+
     if (isViewingAllSections) {
       if (sessionFilterBar) sessionFilterBar.style.display = "flex";
       if (searchContainer) searchContainer.style.display = "";
@@ -212,7 +213,7 @@ window.logoutAdmin = function() {
   checkAdminAuth();
 };
 
-//--- DATABASE API CALL (SUPABASE INTEGRATION)
+// DATABASE API CALL (SUPABASE INTEGRATION)
 window.loadSchedules = async function() {
   try {
     const { data, error } = await db.from("schedules").select("*");
@@ -241,11 +242,12 @@ function populateTeacherDropdown() {
     document.getElementById("teacher-name-select-gate"),
     document.getElementById("teacher-name-select")
   ].filter(Boolean);
+
   if (selects.length === 0 || !sectionsData) return;
 
   const currentSelection = localStorage.getItem("aics_teacher_name") || "";
   const teachers = new Set();
-  
+
   sectionsData.forEach((sec) => {
     if (sec.cells) {
       Object.values(sec.cells).forEach((cell) => {
@@ -257,6 +259,7 @@ function populateTeacherDropdown() {
   });
 
   const sortedTeachers = Array.from(teachers).sort();
+
   selects.forEach(select => {
     const prevValue = select.value || currentSelection;
     select.innerHTML = '<option value="">-- Select Your Name --</option>';
@@ -327,15 +330,15 @@ window.renderTeacherSchedule = function() {
   }
 
   let html = `
-    <div class="section-card" style="margin-bottom:20px;">
-      <div class="section-header-bar">
-        <span class="portal-tag">Faculty Schedule: ${selectedTeacher}</span>
-      </div>
-      <div class="schedule-table-container">
-        <table class="responsive-table show-col-${selectedDayIndex}">
-          <thead>
-            <tr>
-              <th>TIME</th>`;
+  <div class="section-card" style="margin-bottom:20px;">
+    <div class="section-header-bar">
+      <span class="portal-tag">Faculty Schedule: ${selectedTeacher}</span>
+    </div>
+    <div class="schedule-table-container">
+      <table class="responsive-table show-col-${selectedDayIndex}">
+        <thead>
+          <tr>
+            <th>TIME</th>`;
   DAYS.forEach(d => html += `<th>${d}</th>`);
   html += `</tr></thead><tbody>`;
 
@@ -345,31 +348,30 @@ window.renderTeacherSchedule = function() {
       const mapKey = `${slot}_${dayIdx}`;
       const items = gridMap[mapKey];
       if (items && items.length > 0) {
-        html += `<td class="class-cell">`;
+        html += '<td class="class-cell">';
         items.forEach(item => {
           html += `<div class="cell-code">${item.subject}</div>
-                   <div class="cell-name">Sec: ${item.section} (${item.room})</div>`;
+          <div class="cell-name">Sec: ${item.section} (${item.room})</div>`;
         });
-        html += `</td>`;
+        html += '</td>';
       } else {
-        html += `<td class="class-cell"><div class="cell-empty">-</div></td>`;
+        html += '<td class="class-cell"><div class="cell-empty">-</div></td>';
       }
     });
-    html += `</tr>`;
+    html += '</tr>';
   });
-
-  html += `</tbody></table></div></div>`;
+  html += '</tbody></table></div></div>';
   container.innerHTML = html;
 };
 
-//--- RENDER STUDENT SECTIONS
+// RENDER STUDENT SECTIONS
 function renderSections() {
   const studentContainer = document.getElementById("sections-container");
   if (!studentContainer) return;
   studentContainer.innerHTML = "";
 
   if (!sectionsData.length) {
-    studentContainer.innerHTML = `<div style="text-align:center; padding:20px;">No schedules loaded.</div>`;
+    studentContainer.innerHTML = '<div style="text-align:center; padding:20px;">No schedules loaded.</div>';
     return;
   }
 
@@ -382,6 +384,7 @@ function renderSections() {
 
     const header = document.createElement("div");
     header.className = "section-header-bar";
+
     const toggleBtn = document.createElement("button");
     toggleBtn.className = "section-toggle-btn";
     toggleBtn.innerHTML = `<span>${sec.title || sec.code}</span>`;
@@ -392,7 +395,7 @@ function renderSections() {
 
     let html = `<table class="responsive-table show-col-${selectedDayIndex}"><thead><tr><th>TIME</th>`;
     DAYS.forEach(d => html += `<th>${d}</th>`);
-    html += `</tr></thead><tbody>`;
+    html += '</tr></thead><tbody>';
 
     (sec.slots || []).forEach((slot, rowIdx) => {
       html += `<tr><td class="time-cell">${slot}</td>`;
@@ -409,10 +412,9 @@ function renderSections() {
           html += `<td class="class-cell" data-key="${key}"><div class="cell-empty">-</div></td>`;
         }
       });
-      html += `</tr>`;
+      html += '</tr>';
     });
-
-    html += `</tbody></table>`;
+    html += '</tbody></table>';
     tableDiv.innerHTML = html;
 
     toggleBtn.addEventListener("click", () => {
@@ -425,7 +427,7 @@ function renderSections() {
         if (sec.cells && sec.cells[key]) {
           const cell = sec.cells[key];
           const [r, c] = key.split("-");
-          document.getElementById("subject-card-time").textContent = `${DAYS_CLEAN[c]} ${sec.slots[r]}`;
+          document.getElementById("subject-card-time").textContent = `${DAYS_CLEAN[c]} · ${sec.slots[r]}`;
           document.getElementById("subject-card-code").textContent = cell.subject || cell.name || "-";
           document.getElementById("subject-card-name").textContent = cell.name || cell.subject || "-";
           document.getElementById("subject-card-room").textContent = cell.room || "-";
@@ -444,7 +446,7 @@ function renderSections() {
   applyFilters();
 }
 
-//--- RENDER MOBILE DAY TABS
+// RENDER MOBILE DAY TABS
 function renderMobileTabs() {
   const container = document.getElementById("mobile-day-tabs");
   if (!container) return;
@@ -469,7 +471,7 @@ function updateMobileVis() {
   });
 }
 
-//--- SEARCH FILTERS & SESSION FILTER LOGIC
+// SEARCH FILTERS & SESSION FILTER LOGIC
 function applyFilters() {
   const savedSection = localStorage.getItem("aics_student_section");
   const input = document.getElementById("student-search-input") || document.querySelector(".chrome-search-input");
@@ -480,6 +482,7 @@ function applyFilters() {
       const secCode = (card.dataset.sectionCode || "").trim().toLowerCase();
       const secTitle = (card.dataset.sectionTitle || "").trim().toLowerCase();
       const isMatch = secCode === targetSection || secTitle === targetSection || secCode.includes(targetSection) || secTitle.includes(targetSection);
+
       card.style.display = isMatch ? "block" : "none";
       card.querySelectorAll(".class-cell").forEach((c) => {
         c.classList.remove("highlight", "dimmed");
@@ -505,6 +508,7 @@ function applyFilters() {
       const sub = (cell.dataset.sub || "").toLowerCase();
       const prof = (cell.dataset.prof || "").toLowerCase();
       const room = (cell.dataset.room || "").toLowerCase();
+
       if (sub.includes(val) || prof.includes(val) || room.includes(val)) {
         cell.classList.add("highlight");
         cell.classList.remove("dimmed");
@@ -526,6 +530,7 @@ function applyFilters() {
 function initSearchDropdown() {
   const searchInput = document.getElementById("student-search-input") || document.querySelector(".chrome-search-input");
   const searchContainer = document.querySelector(".chrome-search-container") || document.querySelector(".search-box");
+
   if (!searchInput || !searchContainer) return;
 
   let dropdown = searchContainer.querySelector(".chrome-dropdown");
@@ -553,6 +558,7 @@ function initSearchDropdown() {
           suggestions.push({ text: sec.code, type: "Section" });
         }
       }
+
       if (sec.cells) {
         Object.values(sec.cells).forEach(cell => {
           if (cell.professor && cell.professor.toLowerCase().includes(cleanQuery)) {
@@ -577,8 +583,9 @@ function initSearchDropdown() {
 
     dropdown.innerHTML = "";
     const matches = suggestions.slice(0, 8);
+
     if (matches.length === 0) {
-      dropdown.innerHTML = `<div class="suggestion-empty">No matching records found</div>`;
+      dropdown.innerHTML = '<div class="suggestion-empty">No matching records found</div>';
     } else {
       matches.forEach(item => {
         const div = document.createElement("div");
@@ -613,13 +620,10 @@ function initSearchDropdown() {
   });
 }
 
-//--- NOTIFICATION & PHONE ALERT UTILITIES
+// NOTIFICATION & PHONE ALERT UTILITIES
 function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding)
-    .replace(/\-/g, '+')
-    .replace(/_/g, '/');
-
+  const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
   const rawData = window.atob(base64);
   const outputArray = new Uint8Array(rawData.length);
 
@@ -645,7 +649,6 @@ window.toggleNotifications = async function() {
   try {
     const reg = await navigator.serviceWorker.ready;
     let sub = await reg.pushManager.getSubscription();
-
     if (!sub) {
       sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
@@ -653,11 +656,9 @@ window.toggleNotifications = async function() {
       });
     }
 
-    const userIdentifier = localStorage.getItem('aics_student_section') || 
-                           localStorage.getItem('aics_teacher_name') || 'General';
+    const userIdentifier = localStorage.getItem('aics_student_section') || localStorage.getItem('aics_teacher_name') || 'General';
 
-    // Insert record with explicit UUID generation
-    const { data, error } = await db.from('push_subscriptions').insert([
+    const { error } = await db.from('push_subscriptions').insert([
       {
         id: crypto.randomUUID(),
         user_identifier: userIdentifier,
@@ -671,7 +672,7 @@ window.toggleNotifications = async function() {
       return;
     }
 
-    sendClassNotification("Phone Alerts Enabled 🔔", "You will now receive automatic push notifications before your classes start!");
+    sendClassNotification("Phone Alerts Enabled", "You will now receive automatic push notifications before your classes start!");
     alert("Phone alerts enabled successfully! Your device is registered.");
     updateNotificationButtons();
     checkUpcomingClasses();
@@ -684,12 +685,13 @@ window.toggleNotifications = async function() {
 function updateNotificationButtons() {
   const isGranted = ("Notification" in window) && Notification.permission === "granted";
   const buttonIds = ["student-notify-btn", "teacher-notify-btn", "notify-toggle-btn"];
+
   buttonIds.forEach(id => {
     const btn = document.getElementById(id);
     if (btn) {
       if (isGranted) {
         btn.innerHTML = "🔔 Alerts Active";
-        btn.style.backgroundColor = "#16a34a";
+        btn.style.backgroundColor = "var(--success, #16a34a)";
         btn.style.color = "#ffffff";
       } else {
         btn.innerHTML = "🔕 Enable Phone Alerts";
@@ -721,7 +723,7 @@ function parseTimeToMinutes(timeStr) {
 
 function sendClassNotification(title, body) {
   if (!("Notification" in window) || Notification.permission !== "granted") return;
-  
+
   if (swRegistration && swRegistration.showNotification) {
     swRegistration.showNotification(title, {
       body: body,
@@ -760,6 +762,7 @@ function checkUpcomingClasses() {
       if (dayIdx !== -1) {
         const key = `${rowIdx}-${dayIdx}`;
         const cell = sec.cells[key];
+
         if (cell && (cell.subject || cell.name)) {
           const timeDiff = classMinutes - currentMinutes;
           const notificationId = `${now.toDateString()}-${sec.code}-${key}`;
@@ -795,7 +798,7 @@ function checkUpcomingClasses() {
 // PERIODIC SCHEDULE CHECK (Runs every 30 seconds)
 setInterval(checkUpcomingClasses, 30000);
 
-//--- CONFLICT DETECTION & NOTIFICATIONS
+// CONFLICT DETECTION & NOTIFICATIONS
 function getScheduleConflicts() {
   const profMap = {};
   const roomMap = {};
@@ -819,6 +822,7 @@ function getScheduleConflicts() {
         const profDisplay = cell.professor.trim();
         if (!profMap[timeSlotKey]) profMap[timeSlotKey] = {};
         if (!profMap[timeSlotKey][prof]) profMap[timeSlotKey][prof] = [];
+
         profMap[timeSlotKey][prof].push({
           secCode: sec.code || sec.title,
           timeSlot: timeSlotLabel,
@@ -835,6 +839,7 @@ function getScheduleConflicts() {
         const roomDisplay = cell.room.trim();
         if (!roomMap[timeSlotKey]) roomMap[timeSlotKey] = {};
         if (!roomMap[timeSlotKey][room]) roomMap[timeSlotKey][room] = [];
+
         roomMap[timeSlotKey][room].push({
           secCode: sec.code || sec.title,
           timeSlot: timeSlotLabel,
@@ -939,12 +944,13 @@ window.addNewSection = async function () {
 
   if (codeInput) codeInput.value = "";
   if (titleInput) titleInput.value = "";
+
   renderAdminSections();
   renderSections();
   alert(`Section "${code}" created successfully!`);
 };
 
-//--- ADMIN SECTION SEARCH FILTER
+// ADMIN SECTION SEARCH FILTER
 window.filterAdminSections = function () {
   const input = document.getElementById("admin-search-input");
   const val = input ? input.value.trim().toLowerCase() : (window.adminSearchQuery || "");
@@ -963,7 +969,7 @@ window.filterAdminSections = function () {
   });
 };
 
-//--- RENDER ADMIN SECTION EDITORS
+// RENDER ADMIN SECTION EDITORS
 function renderAdminSections() {
   const container = document.getElementById("admin-sections-list");
   if (!container) return;
@@ -975,60 +981,56 @@ function renderAdminSections() {
 
   const { conflictSet, conflictDetails } = getScheduleConflicts();
   let html = `
-    <div class="admin-search-container" style="margin-bottom: 20px;">
-      <input
-        type="text"
-        id="admin-search-input"
-        placeholder="🔍 Search sections, subjects, rooms, or faculty..."
-        oninput="filterAdminSections()"
-        value="${window.adminSearchQuery || ''}"
-        style="width: 100%; padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border-color, #334155); background: var(--bg-card, #1e293b); color: var(--text-main, #f8fafc); font-size: 0.95rem; box-sizing: border-box;"
-      />
-    </div>
-  `;
+  <div class="admin-search-container" style="margin-bottom: 20px;">
+    <input
+      type="text"
+      id="admin-search-input"
+      placeholder="🔍 Search sections, subjects, rooms, or faculty..."
+      oninput="filterAdminSections()"
+      value="${window.adminSearchQuery || ""}"
+      style="width: 100%; padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-main); font-size: 0.95rem; box-sizing: border-box;"
+    />
+  </div>`;
 
   if (conflictDetails.length > 0) {
     html += `
-      <div style="background: #451a03; border:1px solid #f59e0b; color: #fef3c7; padding: 14px 18px; border-radius:10px; margin-bottom:20px;">
-        <h4 style="margin:0 0 8px 0; color:#f59e0b; display: flex; align-items:center; gap:8px;">
-          <span>⚠️</span> Class Conflict Warning (${conflictDetails.length} detected)
-        </h4>
-        <ul style="margin:0; padding-left:20px; font-size:0.88rem;">
-          ${conflictDetails.map(item => `<li style="margin-bottom:4px;">${item}</li>`).join('')}
-        </ul>
-      </div>
-    `;
+    <div style="background: rgba(245, 158, 11, 0.15); border: 1px solid var(--warning, #f59e0b); color: var(--text-main); padding: 14px 18px; border-radius: 10px; margin-bottom:20px;">
+      <h4 style="margin:0 0 8px 0; color:var(--warning, #f59e0b); display: flex; align-items:center; gap:8px;">
+        <span>⚠️</span> Class Conflict Warning (${conflictDetails.length} detected)
+      </h4>
+      <ul style="margin:0; padding-left:20px; font-size:0.88rem;">
+        ${conflictDetails.map(item => `<li style="margin-bottom:4px;">${item}</li>`).join("")}
+      </ul>
+    </div>`;
   }
 
   sectionsData.forEach((sec, secIdx) => {
     html += `
-      <div class="section-card admin-section-card" data-section-code="${(sec.code || '').toLowerCase()}" data-section-title="${(sec.title || sec.code || '').toLowerCase()}" style="margin-bottom:20px; padding: 18px;">
-        <div style="display: flex; justify-content: space-between; align-items:center; margin-bottom: 12px;">
-          <h3 style="color:var(--primary); margin:0;">${sec.title || sec.code} (${sec.session || 'Regular'})</h3>
-          <div style="display: flex; gap:8px;">
-            <button onclick="addTimeSlot(${secIdx})" class="btn-success">+ Add Time Row</button>
-            <button onclick="deleteSection(${secIdx})" class="btn-danger">Delete Section</button>
-          </div>
+    <div class="section-card admin-section-card" data-section-code="${(sec.code || "").toLowerCase()}" data-section-title="${(sec.title || sec.code || "").toLowerCase()}" style="margin-bottom:20px; padding: 18px;">
+      <div style="display: flex; justify-content: space-between; align-items:center; margin-bottom: 12px;">
+        <h3 style="color:var(--primary); margin:0;">${sec.title || sec.code} (${sec.session || 'Regular'})</h3>
+        <div style="display: flex; gap:8px;">
+          <button onclick="addTimeSlot(${secIdx})" class="btn-success">+ Add Time Row</button>
+          <button onclick="deleteSection(${secIdx})" class="btn-danger">Delete Section</button>
         </div>
-        <div style="overflow-x:auto;">
-          <table class="responsive-table">
-            <thead>
-              <tr>
-                <th style="min-width:130px;">Time Slot</th>
-                ${DAYS_CLEAN.map(d => `<th>${d}</th>`).join('')}
-                <th style="width:40px;"></th>
-              </tr>
-            </thead>
-            <tbody>
-    `;
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="responsive-table">
+          <thead>
+            <tr>
+              <th style="min-width:130px;">Time Slot</th>
+              ${DAYS_CLEAN.map(d => `<th>${d}</th>`).join("")}
+              <th style="width:40px;"></th>
+            </tr>
+          </thead>
+          <tbody>`;
 
     (sec.slots || []).forEach((slot, rowIdx) => {
       html += `
-        <tr>
-          <td class="time-cell">
-            <input type="text" placeholder="e.g. 7:00-8:00 AM" value="${slot}" onchange="updateSlotTime(${secIdx}, ${rowIdx}, this.value)" style="width:100%; background:transparent; border:none; border-bottom:1px solid var(--primary); color:var(--text-main); font-weight:600; box-sizing:border-box; padding:2px;">
-          </td>
-      `;
+      <tr>
+        <td class="time-cell">
+          <input type="text" placeholder="e.g. 7:00-8:00 AM" value="${slot}" onchange="updateSlotTime(${secIdx}, ${rowIdx}, this.value)" style="width:100%; background:transparent; border:none; border-bottom:1px solid var(--primary); color:var(--text-main); font-weight:600; box-sizing:border-box; padding:2px;">
+        </td>`;
 
       DAYS.forEach((_, colIdx) => {
         const key = `${rowIdx}-${colIdx}`;
@@ -1040,13 +1042,12 @@ function renderAdminSections() {
         const cellClass = isConflicted ? 'class-cell highlight' : 'class-cell';
 
         html += `
-          <td class="${cellClass}" style="padding:6px; min-width:140px;">
-            <input type="text" placeholder="Subject Code" value="${sub}" onchange="updateCellData(${secIdx}, '${key}', 'subject', this.value)" style="width:100%; background:transparent; border:none; border-bottom:1px solid var(--border-color); color:var(--text-main); font-weight:600; margin-bottom:4px; box-sizing:border-box;">
-            <input type="text" placeholder="Professor" value="${prof}" onchange="updateCellData(${secIdx}, '${key}', 'professor', this.value)" style="width:100%; background:transparent; border:none; border-bottom:1px solid var(--border-color); color:var(--text-muted); margin-bottom:4px; box-sizing:border-box;">
-            <input type="text" placeholder="Room" value="${room}" onchange="updateCellData(${secIdx}, '${key}', 'room', this.value)" style="width:100%; background:transparent; border:none; color:var(--text-muted); box-sizing:border-box;">
-            ${isConflicted ? '<div style="display:inline-block; background-color: #eab308; color: #0f172a; padding:2px 6px; border-radius: 4px; font-size:0.75rem; font-weight:700; margin-top: 4px;">CONFLICT</div>' : ''}
-          </td>
-        `;
+        <td class="${cellClass}" style="padding:6px; min-width: 140px;">
+          <input type="text" placeholder="Subject Code" value="${sub}" onchange="updateCellData(${secIdx}, '${key}', 'subject', this.value)" style="width:100%; background:transparent; border:none; border-bottom:1px solid var(--border-color); color:var(--text-main); font-weight:600; margin-bottom:4px; box-sizing:border-box;">
+          <input type="text" placeholder="Professor" value="${prof}" onchange="updateCellData(${secIdx}, '${key}', 'professor', this.value)" style="width:100%; background:transparent; border:none; border-bottom:1px solid var(--border-color); color:var(--text-muted); margin-bottom:4px; box-sizing:border-box;">
+          <input type="text" placeholder="Room" value="${room}" onchange="updateCellData(${secIdx}, '${key}', 'room', this.value)" style="width:100%; background:transparent; border:none; color:var(--text-muted); box-sizing:border-box;">
+          ${isConflicted ? '<div style="display:inline-block; background-color: var(--warning, #eab308); color: var(--bg-card, #0f172a); padding:2px 6px; border-radius: 4px; font-size:0.75rem; font-weight:700; margin-top: 4px;">CONFLICT</div>' : ""}
+        </td>`;
       });
 
       html += `
@@ -1063,7 +1064,7 @@ function renderAdminSections() {
   filterAdminSections();
 }
 
-//--- UPDATE CELL DATA & PERSIST
+// UPDATE CELL DATA & PERSIST
 window.updateCellData = function (secIdx, cellKey, field, val) {
   if (!sectionsData[secIdx]) return;
   if (!sectionsData[secIdx].cells) sectionsData[secIdx].cells = {};
@@ -1090,7 +1091,7 @@ window.updateCellData = function (secIdx, cellKey, field, val) {
   renderAdminSections();
 };
 
-//--- DELETE SECTION
+// DELETE SECTION
 window.deleteSection = async function (secIdx) {
   const targetSection = sectionsData[secIdx];
   if (confirm(`Are you sure you want to delete section "${targetSection?.code}"?`)) {
@@ -1107,8 +1108,8 @@ window.deleteSection = async function (secIdx) {
   }
 };
 
-//--- SAVE SCHEDULES TO DATABASE BACKEND
-async function saveSchedulesToDB () {
+// SAVE SCHEDULES TO DATABASE BACKEND
+async function saveSchedulesToDB() {
   try {
     if (!sectionsData || sectionsData.length === 0) return;
     const { error } = await db.from("schedules").upsert(sectionsData, {
@@ -1124,7 +1125,6 @@ async function saveSchedulesToDB () {
 
 // INITIALIZATION
 document.addEventListener("DOMContentLoaded", () => {
-  // Service Worker Registration
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').then((reg) => {
       swRegistration = reg;
@@ -1134,7 +1134,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   document.getElementById("hamburger-btn")?.addEventListener("click", window.toggleHamburger);
-  
+
   document.addEventListener("click", (e) => {
     const menu = document.getElementById("hamburger-menu");
     const btn = document.getElementById("hamburger-btn");
@@ -1158,15 +1158,16 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   const themeToggleBtn = document.getElementById("theme-toggle-btn");
-  function applyTheme (theme) {
+
+  function applyTheme(theme) {
     if (theme === "light") {
       document.body.classList.remove("dark-mode");
       document.body.classList.add("light-mode");
-      if (themeToggleBtn) themeToggleBtn.textContent = "Dark Mode";
+      if (themeToggleBtn) themeToggleBtn.textContent = "🌙 Dark Mode";
     } else {
       document.body.classList.add("dark-mode");
       document.body.classList.remove("light-mode");
-      if (themeToggleBtn) themeToggleBtn.textContent = "Light Mode";
+      if (themeToggleBtn) themeToggleBtn.textContent = "☀️ Light Mode";
     }
   }
 
