@@ -4,7 +4,7 @@
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0b132b",
-  "theme_color": "#2563eb",
+  "theme_color": #FFFFFF",
   "icons": [
     {
       "src": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRI5Y7OS8FAocjy7nxg6O21GdpwV2_vEFkk5A&s",
