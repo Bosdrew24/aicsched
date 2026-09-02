@@ -6,7 +6,7 @@ const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 // GLOBAL STATE & CONSTANTS
 const DAYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY ODL"];
 const DAYS_CLEAN = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
-const VAPID_PUBLIC_KEY = "BOJpCikmUaOrXF7VOE2JMZTVQQx4bef4yoNfcZ8TDJmrwFiSl4pZDwIX-KrIICr1eZo6fosEIO8Ycwayx4m-ulE";
+const VAPID_PUBLIC_KEY = "BOJpCikmUaOrXF7VOE2JMZTVQQx4bef4yoNfcZ8TDJmrwFiSl4pZDwIX-KrIICr1eZo6fosEI08Ycwayx4m-ulE";
 
 let selectedDayIndex = 0;
 let activeSession = "MORNING";
@@ -23,7 +23,7 @@ window.setView = function (viewId) {
   if (target) target.classList.add("active");
 
   const homeBtn = document.getElementById("home-nav-btn");
-  if (homeBtn) homeBtn.style.display = (viewId === "home-view") ? "none" : "inline-block";
+  if (homeBtn) homeBtn.style.display = viewId === "home-view" ? "none" : "inline-block";
 
   const menu = document.getElementById("hamburger-menu");
   if (menu) menu.classList.remove("active");
@@ -35,9 +35,8 @@ window.setView = function (viewId) {
   } else if (viewId === "admin-view") {
     checkAdminAuth();
   }
+  updateNotificationButtons();
 };
-
-updateNotificationButtons();
 
 // HAMBURGER MENU TOGGLE
 window.toggleHamburger = function (event) {
@@ -58,7 +57,9 @@ function checkStudentAuth() {
   const sessionFilterBar = document.getElementById("session-filter-buttons");
   const badge = document.getElementById("active-student-section-badge");
   const searchInput = document.getElementById("student-search-input");
-  const searchContainer = searchInput ? (searchInput.closest(".chrome-search-container") || searchInput.closest(".search-box") || searchInput.parentElement) : null;
+  const searchContainer = searchInput
+    ? searchInput.closest(".chrome-search-container") || searchInput.closest(".search-box") || searchInput.parentElement
+    : null;
 
   if (isViewingAllSections || savedSection) {
     if (gateCard) gateCard.style.display = "none";
@@ -85,19 +86,19 @@ function checkStudentAuth() {
   updateNotificationButtons();
 }
 
-window.openStudentLogin = function() {
+window.openStudentLogin = function () {
   isViewingAllSections = false;
   window.setView("student-view");
   checkStudentAuth();
 };
 
-window.viewAllSections = function() {
+window.viewAllSections = function () {
   isViewingAllSections = true;
   window.setView("student-view");
   checkStudentAuth();
 };
 
-window.submitStudentLogin = function() {
+window.submitStudentLogin = function () {
   const input = document.getElementById("student-section-input");
   if (!input || !input.value.trim()) {
     alert("Please enter a valid section code.");
@@ -109,7 +110,7 @@ window.submitStudentLogin = function() {
   checkStudentAuth();
 };
 
-window.logoutStudent = function() {
+window.logoutStudent = function () {
   localStorage.removeItem("aics_student_section");
   const input = document.getElementById("student-section-input");
   if (input) input.value = "";
@@ -139,12 +140,14 @@ function checkTeacherAuth() {
   updateNotificationButtons();
 }
 
-window.openTeacherLogin = function() {
+window.openTeacherLogin = function () {
   window.setView("teacher-view");
 };
 
-window.submitTeacherLogin = function() {
-  const select = document.getElementById("teacher-name-select-gate") || document.getElementById("teacher-name-select");
+window.submitTeacherLogin = function () {
+  const select =
+    document.getElementById("teacher-name-select-gate") ||
+    document.getElementById("teacher-name-select");
   if (!select || !select.value) {
     alert("Please select your faculty profile.");
     return;
@@ -153,7 +156,7 @@ window.submitTeacherLogin = function() {
   checkTeacherAuth();
 };
 
-window.logoutTeacher = function() {
+window.logoutTeacher = function () {
   localStorage.removeItem("aics_teacher_name");
   const select = document.getElementById("teacher-name-select-gate");
   if (select) select.value = "";
@@ -165,14 +168,14 @@ window.openAdminModal = function () {
   window.setView("admin-view");
 };
 
-window.closeAdminModal = function() {
+window.closeAdminModal = function () {
   const modal = document.getElementById("admin-login-modal");
   if (modal) modal.style.display = "none";
   const passInput = document.getElementById("admin-pass-input");
   if (passInput) passInput.value = "";
 };
 
-window.submitAdminLogin = function() {
+window.submitAdminLogin = function () {
   const passInput = document.getElementById("admin-pass-input");
   if (!passInput || !passInput.value.trim()) {
     alert("Please enter an administrative passcode.");
@@ -197,7 +200,7 @@ function checkAdminAuth() {
   }
 }
 
-window.submitAdminViewLogin = function() {
+window.submitAdminViewLogin = function () {
   const passInput = document.getElementById("admin-view-pass-input");
   if (!passInput || !passInput.value.trim()) {
     alert("Please enter the admin passcode.");
@@ -208,13 +211,13 @@ window.submitAdminViewLogin = function() {
   checkAdminAuth();
 };
 
-window.logoutAdmin = function() {
+window.logoutAdmin = function () {
   localStorage.removeItem("aics_admin_logged_in");
   checkAdminAuth();
 };
 
 // DATABASE API CALL (SUPABASE INTEGRATION)
-window.loadSchedules = async function() {
+window.loadSchedules = async function () {
   try {
     const { data, error } = await db.from("schedules").select("*");
     if (error) {
@@ -244,7 +247,6 @@ function populateTeacherDropdown() {
   ].filter(Boolean);
 
   if (selects.length === 0 || !sectionsData) return;
-
   const currentSelection = localStorage.getItem("aics_teacher_name") || "";
   const teachers = new Set();
 
@@ -259,8 +261,7 @@ function populateTeacherDropdown() {
   });
 
   const sortedTeachers = Array.from(teachers).sort();
-
-  selects.forEach(select => {
+  selects.forEach((select) => {
     const prevValue = select.value || currentSelection;
     select.innerHTML = '<option value="">-- Select Your Name --</option>';
     sortedTeachers.forEach((prof) => {
@@ -274,19 +275,20 @@ function populateTeacherDropdown() {
 }
 
 // RENDER TEACHER SCHEDULE AS A TIMETABLE GRID
-window.renderTeacherSchedule = function() {
+window.renderTeacherSchedule = function () {
   const container = document.getElementById("teacher-schedule-container");
   if (!container) return;
 
   const selectedTeacher = localStorage.getItem("aics_teacher_name") || "";
   if (!selectedTeacher) {
-    container.innerHTML = '<div style="color: var(--text-muted); text-align:center; padding:30px;">Please select your name to view your assigned classes.</div>';
+    container.innerHTML = `<div style="color: var(--text-muted); text-align:center; padding:30px;">
+      Please select your name to view your assigned classes.</div>`;
     return;
   }
 
   let masterSlots = [];
-  sectionsData.forEach(sec => {
-    (sec.slots || []).forEach(slot => {
+  sectionsData.forEach((sec) => {
+    (sec.slots || []).forEach((slot) => {
       if (!masterSlots.includes(slot)) masterSlots.push(slot);
     });
   });
@@ -325,7 +327,8 @@ window.renderTeacherSchedule = function() {
   });
 
   if (!hasClasses) {
-    container.innerHTML = `<div style="color: var(--text-muted); text-align:center; padding:30px;">No assigned classes found for <strong>${selectedTeacher}</strong>.</div>`;
+    container.innerHTML = `<div style="color: var(--text-muted); text-align:center; padding:30px;">
+      No assigned classes found for <strong>${selectedTeacher}</strong>.</div>`;
     return;
   }
 
@@ -339,19 +342,19 @@ window.renderTeacherSchedule = function() {
         <thead>
           <tr>
             <th>TIME</th>`;
-  DAYS.forEach(d => html += `<th>${d}</th>`);
+  DAYS.forEach((d) => (html += `<th>${d}</th>`));
   html += `</tr></thead><tbody>`;
 
   masterSlots.forEach((slot) => {
     html += `<tr><td class="time-cell">${slot}</td>`;
-    DAYS.forEach((_, dayIdx) => {
+    DAYS.forEach((d, dayIdx) => {
       const mapKey = `${slot}_${dayIdx}`;
       const items = gridMap[mapKey];
       if (items && items.length > 0) {
         html += '<td class="class-cell">';
-        items.forEach(item => {
+        items.forEach((item) => {
           html += `<div class="cell-code">${item.subject}</div>
-          <div class="cell-name">Sec: ${item.section} (${item.room})</div>`;
+                   <div class="cell-name">Sec: ${item.section} (${item.room})</div>`;
         });
         html += '</td>';
       } else {
@@ -360,6 +363,7 @@ window.renderTeacherSchedule = function() {
     });
     html += '</tr>';
   });
+
   html += '</tbody></table></div></div>';
   container.innerHTML = html;
 };
@@ -368,8 +372,8 @@ window.renderTeacherSchedule = function() {
 function renderSections() {
   const studentContainer = document.getElementById("sections-container");
   if (!studentContainer) return;
-  studentContainer.innerHTML = "";
 
+  studentContainer.innerHTML = "";
   if (!sectionsData.length) {
     studentContainer.innerHTML = '<div style="text-align:center; padding:20px;">No schedules loaded.</div>';
     return;
@@ -394,7 +398,7 @@ function renderSections() {
     tableDiv.className = "schedule-table-container";
 
     let html = `<table class="responsive-table show-col-${selectedDayIndex}"><thead><tr><th>TIME</th>`;
-    DAYS.forEach(d => html += `<th>${d}</th>`);
+    DAYS.forEach((d) => (html += `<th>${d}</th>`));
     html += '</tr></thead><tbody>';
 
     (sec.slots || []).forEach((slot, rowIdx) => {
@@ -402,6 +406,7 @@ function renderSections() {
       DAYS.forEach((d, colIdx) => {
         const key = `${rowIdx}-${colIdx}`;
         const cell = sec.cells ? sec.cells[key] : null;
+
         if (cell && (cell.subject || cell.name)) {
           const displaySubject = cell.subject || cell.name;
           html += `<td class="class-cell" data-key="${key}" data-sub="${displaySubject}" data-prof="${cell.professor || ''}" data-room="${cell.room || ''}">
@@ -414,6 +419,7 @@ function renderSections() {
       });
       html += '</tr>';
     });
+
     html += '</tbody></table>';
     tableDiv.innerHTML = html;
 
@@ -427,7 +433,7 @@ function renderSections() {
         if (sec.cells && sec.cells[key]) {
           const cell = sec.cells[key];
           const [r, c] = key.split("-");
-          document.getElementById("subject-card-time").textContent = `${DAYS_CLEAN[c]} · ${sec.slots[r]}`;
+          document.getElementById("subject-card-time").textContent = `${DAYS_CLEAN[c]} ${sec.slots[r]}`;
           document.getElementById("subject-card-code").textContent = cell.subject || cell.name || "-";
           document.getElementById("subject-card-name").textContent = cell.name || cell.subject || "-";
           document.getElementById("subject-card-room").textContent = cell.room || "-";
@@ -474,14 +480,20 @@ function updateMobileVis() {
 // SEARCH FILTERS & SESSION FILTER LOGIC
 function applyFilters() {
   const savedSection = localStorage.getItem("aics_student_section");
-  const input = document.getElementById("student-search-input") || document.querySelector(".chrome-search-input");
+  const input =
+    document.getElementById("student-search-input") ||
+    document.querySelector(".chrome-search-input");
 
   document.querySelectorAll("#sections-container .section-card").forEach((card) => {
     if (!isViewingAllSections && savedSection) {
       const targetSection = savedSection.trim().toLowerCase();
       const secCode = (card.dataset.sectionCode || "").trim().toLowerCase();
       const secTitle = (card.dataset.sectionTitle || "").trim().toLowerCase();
-      const isMatch = secCode === targetSection || secTitle === targetSection || secCode.includes(targetSection) || secTitle.includes(targetSection);
+      const isMatch =
+        secCode === targetSection ||
+        secTitle === targetSection ||
+        secCode.includes(targetSection) ||
+        secTitle.includes(targetSection);
 
       card.style.display = isMatch ? "block" : "none";
       card.querySelectorAll(".class-cell").forEach((c) => {
@@ -493,8 +505,8 @@ function applyFilters() {
     const cardSession = (card.dataset.session || "").trim().toLowerCase();
     const currentActiveSession = (activeSession || "MORNING").trim().toLowerCase();
     const sessionMatches = !card.dataset.session || cardSession === currentActiveSession;
-
     const val = input ? input.value.trim().toLowerCase() : "";
+
     if (!val) {
       card.style.display = sessionMatches ? "block" : "none";
       card.querySelectorAll(".class-cell").forEach((c) => {
@@ -523,13 +535,17 @@ function applyFilters() {
     const secTitle = (card.dataset.sectionTitle || "").toLowerCase();
     const searchMatches = found || secCode.includes(val) || secTitle.includes(val);
 
-    card.style.display = (sessionMatches && searchMatches) ? "block" : "none";
+    card.style.display = sessionMatches && searchMatches ? "block" : "none";
   });
 }
 
 function initSearchDropdown() {
-  const searchInput = document.getElementById("student-search-input") || document.querySelector(".chrome-search-input");
-  const searchContainer = document.querySelector(".chrome-search-container") || document.querySelector(".search-box");
+  const searchInput =
+    document.getElementById("student-search-input") ||
+    document.querySelector(".chrome-search-input");
+  const searchContainer =
+    document.querySelector(".chrome-search-container") ||
+    document.querySelector(".search-box");
 
   if (!searchInput || !searchContainer) return;
 
@@ -550,7 +566,7 @@ function initSearchDropdown() {
     const suggestions = [];
     const addedKeys = new Set();
 
-    sectionsData.forEach(sec => {
+    sectionsData.forEach((sec) => {
       if (sec.code && sec.code.toLowerCase().includes(cleanQuery)) {
         const key = `sec-${sec.code}`;
         if (!addedKeys.has(key)) {
@@ -558,9 +574,8 @@ function initSearchDropdown() {
           suggestions.push({ text: sec.code, type: "Section" });
         }
       }
-
       if (sec.cells) {
-        Object.values(sec.cells).forEach(cell => {
+        Object.values(sec.cells).forEach((cell) => {
           if (cell.professor && cell.professor.toLowerCase().includes(cleanQuery)) {
             const profName = cell.professor.trim();
             const key = `prof-${profName.toLowerCase()}`;
@@ -587,7 +602,7 @@ function initSearchDropdown() {
     if (matches.length === 0) {
       dropdown.innerHTML = '<div class="suggestion-empty">No matching records found</div>';
     } else {
-      matches.forEach(item => {
+      matches.forEach((item) => {
         const div = document.createElement("div");
         div.className = "suggestion-item";
         div.innerHTML = `<span>${item.text}</span> <small style="opacity:0.6; font-size:0.75rem; float:right;">${item.type}</small>`;
@@ -599,6 +614,7 @@ function initSearchDropdown() {
         dropdown.appendChild(div);
       });
     }
+
     dropdown.classList.add("active");
   }
 
@@ -626,14 +642,13 @@ function urlBase64ToUint8Array(base64String) {
   const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
   const rawData = window.atob(base64);
   const outputArray = new Uint8Array(rawData.length);
-
   for (let i = 0; i < rawData.length; ++i) {
     outputArray[i] = rawData.charCodeAt(i);
   }
   return outputArray;
 }
 
-window.toggleNotifications = async function() {
+window.toggleNotifications = async function () {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
     alert("Push notifications are not supported on this browser or page protocol.");
     return;
@@ -656,7 +671,10 @@ window.toggleNotifications = async function() {
       });
     }
 
-    const userIdentifier = localStorage.getItem('aics_student_section') || localStorage.getItem('aics_teacher_name') || 'General';
+    const userIdentifier =
+      localStorage.getItem('aics_student_section') ||
+      localStorage.getItem('aics_teacher_name') ||
+      'General';
 
     const { error } = await db.from('push_subscriptions').insert([
       {
@@ -672,7 +690,10 @@ window.toggleNotifications = async function() {
       return;
     }
 
-    sendClassNotification("Phone Alerts Enabled", "You will now receive automatic push notifications before your classes start!");
+    sendClassNotification(
+      "Phone Alerts Enabled",
+      "You will now receive automatic push notifications before your classes start!"
+    );
     alert("Phone alerts enabled successfully! Your device is registered.");
     updateNotificationButtons();
     checkUpcomingClasses();
@@ -683,18 +704,18 @@ window.toggleNotifications = async function() {
 };
 
 function updateNotificationButtons() {
-  const isGranted = ("Notification" in window) && Notification.permission === "granted";
+  const isGranted = "Notification" in window && Notification.permission === "granted";
   const buttonIds = ["student-notify-btn", "teacher-notify-btn", "notify-toggle-btn"];
 
-  buttonIds.forEach(id => {
+  buttonIds.forEach((id) => {
     const btn = document.getElementById(id);
     if (btn) {
       if (isGranted) {
-        btn.innerHTML = "🔔 Alerts Active";
+        btn.innerHTML = "Alerts Active";
         btn.style.backgroundColor = "var(--success, #16a34a)";
         btn.style.color = "#ffffff";
       } else {
-        btn.innerHTML = "🔕 Enable Phone Alerts";
+        btn.innerHTML = "Enable Phone Alerts";
         btn.style.backgroundColor = "";
         btn.style.color = "";
       }
@@ -723,7 +744,6 @@ function parseTimeToMinutes(timeStr) {
 
 function sendClassNotification(title, body) {
   if (!("Notification" in window) || Notification.permission !== "granted") return;
-
   if (swRegistration && swRegistration.showNotification) {
     swRegistration.showNotification(title, {
       body: body,
@@ -740,12 +760,21 @@ function sendClassNotification(title, body) {
 }
 
 function checkUpcomingClasses() {
-  if (!("Notification" in window) || Notification.permission !== "granted" || !sectionsData.length) return;
+  if (!("Notification" in window) || Notification.permission !== "granted" || !sectionsData.length)
+    return;
 
   const now = new Date();
-  const currentDayStr = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY ODL", "SATURDAY"][now.getDay()];
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const currentDayStr = [
+    "SUNDAY",
+    "MONDAY",
+    "TUESDAY",
+    "WEDNESDAY",
+    "THURSDAY",
+    "FRIDAY ODL",
+    "SATURDAY"
+  ][now.getDay()];
 
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
   const savedTeacher = (localStorage.getItem("aics_teacher_name") || "").trim().toLowerCase();
   const savedStudentSection = (localStorage.getItem("aics_student_section") || "").trim().toLowerCase();
 
@@ -812,7 +841,7 @@ function getScheduleConflicts() {
       if (!cell) return;
 
       const [rowIdx, colIdx] = cellKey.split("-");
-      const rawSlotLabel = (sec.slots && sec.slots[rowIdx]) ? sec.slots[rowIdx].trim() : `ROW-${rowIdx}`;
+      const rawSlotLabel = sec.slots && sec.slots[rowIdx] ? sec.slots[rowIdx].trim() : `ROW-${rowIdx}`;
       const timeSlotLabel = rawSlotLabel.toUpperCase();
       const timeSlotKey = `${colIdx}_${timeSlotLabel}`;
       const dayLabel = DAYS_CLEAN[colIdx] || "Day";
@@ -820,6 +849,7 @@ function getScheduleConflicts() {
       if (cell.professor && cell.professor.trim() !== "") {
         const prof = cell.professor.trim().toLowerCase();
         const profDisplay = cell.professor.trim();
+
         if (!profMap[timeSlotKey]) profMap[timeSlotKey] = {};
         if (!profMap[timeSlotKey][prof]) profMap[timeSlotKey][prof] = [];
 
@@ -837,6 +867,7 @@ function getScheduleConflicts() {
       if (cell.room && cell.room.trim() !== "" && cell.room.trim().toLowerCase() !== "tba") {
         const room = cell.room.trim().toLowerCase();
         const roomDisplay = cell.room.trim();
+
         if (!roomMap[timeSlotKey]) roomMap[timeSlotKey] = {};
         if (!roomMap[timeSlotKey][room]) roomMap[timeSlotKey][room] = [];
 
@@ -858,8 +889,10 @@ function getScheduleConflicts() {
       Object.values(entriesByName).forEach((matches) => {
         if (matches.length > 1) {
           const first = matches[0];
-          const involvedSections = matches.map(m => m.secCode).join(" and ");
-          conflictDetails.push(`${first.type} Conflict: "${first.name}" is double-booked in ${involvedSections} on ${first.dayName} (${first.timeSlot}).`);
+          const involvedSections = matches.map((m) => m.secCode).join(" and ");
+          conflictDetails.push(
+            `${first.type} Conflict: "${first.name}" is double-booked in ${involvedSections} on ${first.dayName} (${first.timeSlot}).`
+          );
           matches.forEach((item) => {
             conflictSet.add(`${item.secIdx}-${item.cellKey}`);
           });
@@ -886,10 +919,65 @@ window.updateSlotTime = function (secIdx, rowIdx, val) {
   renderTeacherSchedule();
 };
 
+// HELPER: CALCULATE NEXT TIME SLOT BASED ON LAST TIME
+function calculateNextSlot(lastSlotStr) {
+  if (!lastSlotStr) return "8:00-9:00 AM";
+
+  const parts = lastSlotStr.split(/[–-]/);
+  if (parts.length < 2) return "8:00-9:00 AM";
+
+  let endPart = parts[1].trim();
+
+  // Extract period (AM/PM)
+  let ampmMatch = endPart.match(/(AM|PM)/i) || lastSlotStr.match(/(AM|PM)/i);
+  let period = ampmMatch ? ampmMatch[0].toUpperCase() : "AM";
+
+  let cleanTime = endPart.replace(/(AM|PM)/gi, "").trim();
+  let timeParts = cleanTime.split(":");
+  if (timeParts.length < 2) return "8:00-9:00 AM";
+
+  let hours = parseInt(timeParts[0], 10);
+  let minutes = parseInt(timeParts[1], 10) || 0;
+
+  // Convert to 24-hour format
+  let end24 = hours;
+  if (period === "PM" && hours !== 12) end24 += 12;
+  if (period === "AM" && hours === 12) end24 = 0;
+
+  let nextStart24 = end24;
+  let nextEnd24 = (nextStart24 + 1) % 24;
+
+  function format12(h24) {
+    let h12 = h24 % 12 || 12;
+    let p = h24 >= 12 ? "PM" : "AM";
+    let minStr = minutes < 10 ? "0" + minutes : minutes;
+    return { h12, minStr, p };
+  }
+
+  const s = format12(nextStart24);
+  const e = format12(nextEnd24);
+
+  if (s.p === e.p) {
+    return `${s.h12}:${s.minStr}-${e.h12}:${e.minStr} ${e.p}`;
+  } else {
+    return `${s.h12}:${s.minStr} ${s.p}-${e.h12}:${e.minStr} ${e.p}`;
+  }
+}
+
+// DYNAMIC TIME INCREMENT ON ADD ROW
 window.addTimeSlot = function (secIdx) {
   if (!sectionsData[secIdx]) return;
   if (!sectionsData[secIdx].slots) sectionsData[secIdx].slots = [];
-  sectionsData[secIdx].slots.push("12:00-1:00 PM");
+
+  const slots = sectionsData[secIdx].slots;
+  let nextSlot = "8:00-9:00 AM";
+
+  if (slots.length > 0) {
+    const lastSlot = slots[slots.length - 1];
+    nextSlot = calculateNextSlot(lastSlot);
+  }
+
+  sectionsData[secIdx].slots.push(nextSlot);
   saveSchedulesToDB();
   renderAdminSections();
   renderSections();
@@ -916,7 +1004,9 @@ window.addNewSection = async function () {
     return;
   }
 
-  const sectionExists = sectionsData.some(sec => sec.code && sec.code.trim().toLowerCase() === code.toLowerCase());
+  const sectionExists = sectionsData.some(
+    (sec) => sec.code && sec.code.trim().toLowerCase() === code.toLowerCase()
+  );
   if (sectionExists) {
     alert(`Section "${code}" already exists. Duplicate sections are not allowed.`);
     return;
@@ -953,7 +1043,7 @@ window.addNewSection = async function () {
 // ADMIN SECTION SEARCH FILTER
 window.filterAdminSections = function () {
   const input = document.getElementById("admin-search-input");
-  const val = input ? input.value.trim().toLowerCase() : (window.adminSearchQuery || "");
+  const val = input ? input.value.trim().toLowerCase() : window.adminSearchQuery || "";
   window.adminSearchQuery = val;
 
   document.querySelectorAll("#admin-sections-list .admin-section-card").forEach((card) => {
@@ -980,14 +1070,15 @@ function renderAdminSections() {
   }
 
   const { conflictSet, conflictDetails } = getScheduleConflicts();
+
   let html = `
   <div class="admin-search-container" style="margin-bottom: 20px;">
     <input
       type="text"
       id="admin-search-input"
-      placeholder="🔍 Search sections, subjects, rooms, or faculty..."
+      placeholder="Search sections, subjects, rooms, or faculty..."
       oninput="filterAdminSections()"
-      value="${window.adminSearchQuery || ""}"
+      value="${window.adminSearchQuery || ''}"
       style="width: 100%; padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-main); font-size: 0.95rem; box-sizing: border-box;"
     />
   </div>`;
@@ -999,14 +1090,17 @@ function renderAdminSections() {
         <span>⚠️</span> Class Conflict Warning (${conflictDetails.length} detected)
       </h4>
       <ul style="margin:0; padding-left:20px; font-size:0.88rem;">
-        ${conflictDetails.map(item => `<li style="margin-bottom:4px;">${item}</li>`).join("")}
+        ${conflictDetails.map((item) => `<li style="margin-bottom:4px;">${item}</li>`).join('')}
       </ul>
     </div>`;
   }
 
   sectionsData.forEach((sec, secIdx) => {
     html += `
-    <div class="section-card admin-section-card" data-section-code="${(sec.code || "").toLowerCase()}" data-section-title="${(sec.title || sec.code || "").toLowerCase()}" style="margin-bottom:20px; padding: 18px;">
+    <div class="section-card admin-section-card"
+      data-section-code="${(sec.code || '').toLowerCase()}"
+      data-section-title="${(sec.title || sec.code || '').toLowerCase()}"
+      style="margin-bottom:20px; padding: 18px;">
       <div style="display: flex; justify-content: space-between; align-items:center; margin-bottom: 12px;">
         <h3 style="color:var(--primary); margin:0;">${sec.title || sec.code} (${sec.session || 'Regular'})</h3>
         <div style="display: flex; gap:8px;">
@@ -1019,7 +1113,7 @@ function renderAdminSections() {
           <thead>
             <tr>
               <th style="min-width:130px;">Time Slot</th>
-              ${DAYS_CLEAN.map(d => `<th>${d}</th>`).join("")}
+              ${DAYS_CLEAN.map((d) => `<th>${d}</th>`).join('')}
               <th style="width:40px;"></th>
             </tr>
           </thead>
@@ -1029,35 +1123,45 @@ function renderAdminSections() {
       html += `
       <tr>
         <td class="time-cell">
-          <input type="text" placeholder="e.g. 7:00-8:00 AM" value="${slot}" onchange="updateSlotTime(${secIdx}, ${rowIdx}, this.value)" style="width:100%; background:transparent; border:none; border-bottom:1px solid var(--primary); color:var(--text-main); font-weight:600; box-sizing:border-box; padding:2px;">
+          <input type="text" placeholder="e.g. 7:00-8:00 AM"
+            value="${slot}" onchange="updateSlotTime(${secIdx}, ${rowIdx}, this.value)"
+            style="width:100%; background: transparent; border:none; border-bottom:1px solid var(--primary); color:var(--text-main); font-weight:600; padding:2px; box-sizing:border-box;">
         </td>`;
 
-      DAYS.forEach((_, colIdx) => {
+      DAYS.forEach((d, colIdx) => {
         const key = `${rowIdx}-${colIdx}`;
         const cell = sec.cells ? sec.cells[key] : null;
-        const sub = cell ? (cell.subject || cell.name || "") : "";
-        const prof = cell ? (cell.professor || "") : "";
-        const room = cell ? (cell.room || "") : "";
+        const sub = cell ? cell.subject || cell.name || "" : "";
+        const prof = cell ? cell.professor || "" : "";
+        const room = cell ? cell.room || "" : "";
+
         const isConflicted = conflictSet.has(`${secIdx}-${key}`);
         const cellClass = isConflicted ? 'class-cell highlight' : 'class-cell';
 
         html += `
         <td class="${cellClass}" style="padding:6px; min-width: 140px;">
-          <input type="text" placeholder="Subject Code" value="${sub}" onchange="updateCellData(${secIdx}, '${key}', 'subject', this.value)" style="width:100%; background:transparent; border:none; border-bottom:1px solid var(--border-color); color:var(--text-main); font-weight:600; margin-bottom:4px; box-sizing:border-box;">
-          <input type="text" placeholder="Professor" value="${prof}" onchange="updateCellData(${secIdx}, '${key}', 'professor', this.value)" style="width:100%; background:transparent; border:none; border-bottom:1px solid var(--border-color); color:var(--text-muted); margin-bottom:4px; box-sizing:border-box;">
-          <input type="text" placeholder="Room" value="${room}" onchange="updateCellData(${secIdx}, '${key}', 'room', this.value)" style="width:100%; background:transparent; border:none; color:var(--text-muted); box-sizing:border-box;">
-          ${isConflicted ? '<div style="display:inline-block; background-color: var(--warning, #eab308); color: var(--bg-card, #0f172a); padding:2px 6px; border-radius: 4px; font-size:0.75rem; font-weight:700; margin-top: 4px;">CONFLICT</div>' : ""}
+          <input type="text" placeholder="Subject Code" value="${sub}"
+            onchange="updateCellData(${secIdx}, '${key}', 'subject', this.value)"
+            style="width:100%; background:transparent; border:none; border-bottom:1px solid var(--border-color); color:var(--text-main); font-weight:600; margin-bottom:4px; box-sizing:border-box;">
+          <input type="text" placeholder="Professor" value="${prof}"
+            onchange="updateCellData(${secIdx}, '${key}', 'professor', this.value)"
+            style="width:100%; background:transparent; border:none; border-bottom:1px solid var(--border-color); color:var(--text-muted); margin-bottom:4px; box-sizing:border-box;">
+          <input type="text" placeholder="Room" value="${room}"
+            onchange="updateCellData(${secIdx}, '${key}', 'room', this.value)"
+            style="width:100%; background:transparent; border:none; color:var(--text-muted); box-sizing:border-box;">
+          ${isConflicted ? '<div style="display:inline-block; background-color: var(--warning, #eab308); color: var(--bg-card, #30f172a); padding:2px 6px; border-radius: 4px; font-size:0.75rem; font-weight:700; margin-top: 4px;">CONFLICT</div>' : ''}
         </td>`;
       });
 
       html += `
         <td style="padding: 6px; text-align:center;">
-          <button onclick="deleteTimeSlot(${secIdx}, ${rowIdx})" style="background:transparent; border: none; color: var(--danger); cursor:pointer; font-weight:bold;">X</button>
+          <button onclick="deleteTimeSlot(${secIdx}, ${rowIdx})"
+            style="background:transparent; border: none; color: var(--danger); cursor:pointer; font-weight:bold;">X</button>
         </td>
       </tr>`;
     });
 
-    html += `</tbody></table></div></div>`;
+    html += '</tbody></table></div></div>';
   });
 
   container.innerHTML = html;
@@ -1126,11 +1230,14 @@ async function saveSchedulesToDB() {
 // INITIALIZATION
 document.addEventListener("DOMContentLoaded", () => {
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').then((reg) => {
-      swRegistration = reg;
-    }).catch((err) => {
-      console.error("Service Worker registration failed:", err);
-    });
+    navigator.serviceWorker
+      .register('sw.js')
+      .then((reg) => {
+        swRegistration = reg;
+      })
+      .catch((err) => {
+        console.error("Service Worker registration failed:", err);
+      });
   }
 
   document.getElementById("hamburger-btn")?.addEventListener("click", window.toggleHamburger);
@@ -1147,10 +1254,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   updateNotificationButtons();
 
-  document.querySelectorAll(".session-filter-btn").forEach(btn => {
+  document.querySelectorAll(".session-filter-btn").forEach((btn) => {
     btn.addEventListener("click", (e) => {
       const container = e.target.parentElement;
-      container.querySelectorAll(".session-filter-btn").forEach(b => b.classList.remove("active"));
+      container.querySelectorAll(".session-filter-btn").forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
       activeSession = btn.dataset.session;
       applyFilters();
@@ -1158,16 +1265,15 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   const themeToggleBtn = document.getElementById("theme-toggle-btn");
-
   function applyTheme(theme) {
     if (theme === "light") {
       document.body.classList.remove("dark-mode");
       document.body.classList.add("light-mode");
-      if (themeToggleBtn) themeToggleBtn.textContent = "🌙 Dark Mode";
+      if (themeToggleBtn) themeToggleBtn.textContent = "Dark Mode";
     } else {
       document.body.classList.add("dark-mode");
       document.body.classList.remove("light-mode");
-      if (themeToggleBtn) themeToggleBtn.textContent = "☀️ Light Mode";
+      if (themeToggleBtn) themeToggleBtn.textContent = "Light Mode";
     }
   }
 
