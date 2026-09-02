@@ -62,6 +62,7 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   transition: background-color 0.3s ease, color 0.3s ease;
+  overflow-x: hidden;
 }
 
 .topbar {
@@ -256,7 +257,7 @@ body {
   font-size: 1rem;
 }
 
-/* HOME VIEW PORTAL CHOICES (HORIZONTAL FLEX LAYOUT) */
+/* HOME VIEW PORTAL CHOICES */
 .portal-choices {
   display: flex;
   flex-direction: row;
@@ -305,8 +306,12 @@ body {
 
 .choice-card-btn.admin {
   background: var(--card-bg);
-  color: #38bdf8;
+  color: #0284c7;
   border: 1px solid var(--border-color);
+}
+
+body.dark-mode .choice-card-btn.admin {
+  color: #38bdf8;
 }
 
 .choice-card-btn.admin:hover {
@@ -339,9 +344,9 @@ body {
 
 .chrome-search-container {
   position: relative;
-  min-width: 320px;
-  flex: 1;
+  width: 100%;
   max-width: 450px;
+  flex: 1 1 300px;
 }
 
 .chrome-search-box {
@@ -485,6 +490,7 @@ body {
   overflow-x: auto;
   margin-bottom: 16px;
   padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
 }
 
 .day-tab {
@@ -675,7 +681,7 @@ body {
 /* AUTH */
 .auth-container {
   max-width: 400px;
-  margin: 60px auto;
+  margin: 40px auto;
   background: var(--card-bg);
   padding: 32px;
   border-radius: var(--radius-lg);
@@ -737,7 +743,7 @@ body {
   justify-content: center;
   align-items: center;
   z-index: 1000;
-  padding: 20px;
+  padding: 16px;
 }
 
 .overlay.open {
@@ -754,6 +760,8 @@ body {
   box-shadow: var(--shadow-modal);
   border: 1px solid var(--border-color);
   animation: modalUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 @keyframes modalUp {
@@ -836,8 +844,70 @@ body {
 
 .details-close-btn:hover { background: var(--secondary-hover); }
 
-/* MOBILE RESPONSIVE */
+/* SELECT OPTION COLOR FIX (DYNAMIC FOR LIGHT & DARK MODE) */
+select option {
+  background-color: var(--card-bg);
+  color: var(--text-main);
+}
+
+/* MOBILE RESPONSIVE OVERRIDES */
 @media (max-width: 768px) {
+  .wrap {
+    padding: 12px 12px 32px;
+  }
+
+  .nav-bar {
+    padding: 12px 16px;
+    margin-bottom: 16px;
+  }
+
+  .portal-tag {
+    font-size: 1rem;
+  }
+
+  .nav-btn, .notify-btn {
+    padding: 7px 12px;
+    font-size: 0.8rem;
+  }
+
+  .about-section, .hero-container {
+    padding: 20px 16px;
+    margin-bottom: 16px;
+  }
+
+  .about-section h2, .hero-title {
+    font-size: 1.35rem;
+  }
+
+  .hero-subtitle {
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+  }
+
+  .portal-choices {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .choice-card-btn {
+    max-width: 100%;
+    width: 100%;
+    padding: 12px 16px;
+  }
+
+  .schedule-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .chrome-search-container {
+    max-width: 100%;
+    width: 100%;
+  }
+
   .mobile-day-tabs {
     display: flex;
   }
@@ -848,6 +918,17 @@ body {
 
   .responsive-table th:first-child, .responsive-table td:first-child {
     display: table-cell;
+  }
+
+  .time-cell {
+    width: 95px;
+    font-size: 0.78rem;
+    padding: 8px 4px;
+  }
+
+  .class-cell {
+    min-width: unset;
+    padding: 8px 6px;
   }
 
   .responsive-table.show-col-0 th:nth-child(2), .responsive-table.show-col-0 td:nth-child(2),
@@ -875,26 +956,12 @@ body {
     padding: 8px 4px;
   }
 
-  /* PORTAL CHOICES STACKED ON MOBILE */
-  .portal-choices {
-    flex-direction: column;
-    align-items: stretch;
-    max-width: 320px;
+  .auth-container {
+    margin: 20px auto;
+    padding: 20px 16px;
   }
 
-  .choice-card-btn {
-    max-width: 100%;
-    width: 100%;
+  .modal, .details-card-modal {
+    padding: 20px 16px;
   }
-}
-/* Fix for invisible text inside select dropdown options */
-select option {
-  background-color: #0f172a; /* Dark background for dropdown menu items */
-  color: #f8fafc;            /* Readable light text for unselected options */
-}
-
-/* Light mode support */
-body.light-mode select option {
-  background-color: #ffffff;
-  color: #0f172a;
 }
