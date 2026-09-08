@@ -6,7 +6,7 @@ const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 // GLOBAL STATE & CONSTANTS
 const DAYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY ODL"];
 const DAYS_CLEAN = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
-const VAPID_PUBLIC_KEY = "BOJpCikmUaOrXF7VOE2JMZTVQQx4bef4yoNfcZ8TDJmrwFiSl4pZDwIX-KrIICr1eZo6fosEI08Ycwayx4m-ulE";
+const VAPID_PUBLIC_KEY = "BOJpCikmUaQrXF7VOE2JMZTVQQx4bef4yoNfcZ8TDJmrwFiSl4pZDwIX-KrIICr1eZo6fosEI08Ycwayx4m-ule";
 
 let selectedDayIndex = 0;
 let activeSession = "MORNING";
@@ -44,9 +44,7 @@ window.toggleHamburger = function (event) {
     event.stopPropagation();
   }
   const menu = document.getElementById("hamburger-menu");
-  if (menu) {
-    menu.classList.toggle("active");
-  }
+  if (menu) menu.classList.toggle("active");
 };
 
 // STUDENT PORTAL AUTH & SEPARATION LOGIC
@@ -333,17 +331,17 @@ window.renderTeacherSchedule = function () {
   }
 
   let html = `
-  <div class="section-card" style="margin-bottom:20px;">
-    <div class="section-header-bar">
-      <span class="portal-tag">Faculty Schedule: ${selectedTeacher}</span>
-    </div>
-    <div class="schedule-table-container">
-      <table class="responsive-table show-col-${selectedDayIndex}">
-        <thead>
-          <tr>
-            <th>TIME</th>`;
+    <div class="section-card" style="margin-bottom:20px;">
+      <div class="section-header-bar">
+        <span class="portal-tag">Faculty Schedule: ${selectedTeacher}</span>
+      </div>
+      <div class="schedule-table-container">
+        <table class="responsive-table">
+          <thead>
+            <tr>
+              <th>TIME</th>`;
   DAYS.forEach((d) => (html += `<th>${d}</th>`));
-  html += `</tr></thead><tbody>`;
+  html += '</tr></thead><tbody>';
 
   masterSlots.forEach((slot) => {
     html += `<tr><td class="time-cell">${slot}</td>`;
@@ -372,8 +370,8 @@ window.renderTeacherSchedule = function () {
 function renderSections() {
   const studentContainer = document.getElementById("sections-container");
   if (!studentContainer) return;
-
   studentContainer.innerHTML = "";
+
   if (!sectionsData.length) {
     studentContainer.innerHTML = '<div style="text-align:center; padding:20px;">No schedules loaded.</div>';
     return;
@@ -397,7 +395,7 @@ function renderSections() {
     const tableDiv = document.createElement("div");
     tableDiv.className = "schedule-table-container";
 
-    let html = `<table class="responsive-table show-col-${selectedDayIndex}"><thead><tr><th>TIME</th>`;
+    let html = `<table class="responsive-table"><thead><tr><th>TIME</th>`;
     DAYS.forEach((d) => (html += `<th>${d}</th>`));
     html += '</tr></thead><tbody>';
 
@@ -406,7 +404,6 @@ function renderSections() {
       DAYS.forEach((d, colIdx) => {
         const key = `${rowIdx}-${colIdx}`;
         const cell = sec.cells ? sec.cells[key] : null;
-
         if (cell && (cell.subject || cell.name)) {
           const displaySubject = cell.subject || cell.name;
           html += `<td class="class-cell" data-key="${key}" data-sub="${displaySubject}" data-prof="${cell.professor || ''}" data-room="${cell.room || ''}">
@@ -452,37 +449,24 @@ function renderSections() {
   applyFilters();
 }
 
-// RENDER MOBILE DAY TABS
+// RENDER MOBILE DAY TABS (DISABLED / CLEARED FOR FULL HORIZONTAL GRID)
 function renderMobileTabs() {
   const container = document.getElementById("mobile-day-tabs");
-  if (!container) return;
-  container.innerHTML = "";
-
-  DAYS.forEach((day, idx) => {
-    const btn = document.createElement("button");
-    btn.className = "day-tab" + (idx === selectedDayIndex ? " active" : "");
-    btn.innerHTML = day;
-    btn.addEventListener("click", () => {
-      selectedDayIndex = idx;
-      renderMobileTabs();
-      updateMobileVis();
-    });
-    container.appendChild(btn);
-  });
+  if (container) {
+    container.innerHTML = "";
+  }
 }
 
 function updateMobileVis() {
   document.querySelectorAll(".responsive-table").forEach((tbl) => {
-    tbl.className = `responsive-table show-col-${selectedDayIndex}`;
+    tbl.className = "responsive-table";
   });
 }
 
 // SEARCH FILTERS & SESSION FILTER LOGIC
 function applyFilters() {
   const savedSection = localStorage.getItem("aics_student_section");
-  const input =
-    document.getElementById("student-search-input") ||
-    document.querySelector(".chrome-search-input");
+  const input = document.getElementById("student-search-input") || document.querySelector(".chrome-search-input");
 
   document.querySelectorAll("#sections-container .section-card").forEach((card) => {
     if (!isViewingAllSections && savedSection) {
@@ -494,7 +478,6 @@ function applyFilters() {
         secTitle === targetSection ||
         secCode.includes(targetSection) ||
         secTitle.includes(targetSection);
-
       card.style.display = isMatch ? "block" : "none";
       card.querySelectorAll(".class-cell").forEach((c) => {
         c.classList.remove("highlight", "dimmed");
@@ -534,19 +517,13 @@ function applyFilters() {
     const secCode = (card.dataset.sectionCode || "").toLowerCase();
     const secTitle = (card.dataset.sectionTitle || "").toLowerCase();
     const searchMatches = found || secCode.includes(val) || secTitle.includes(val);
-
     card.style.display = sessionMatches && searchMatches ? "block" : "none";
   });
 }
 
 function initSearchDropdown() {
-  const searchInput =
-    document.getElementById("student-search-input") ||
-    document.querySelector(".chrome-search-input");
-  const searchContainer =
-    document.querySelector(".chrome-search-container") ||
-    document.querySelector(".search-box");
-
+  const searchInput = document.getElementById("student-search-input") || document.querySelector(".chrome-search-input");
+  const searchContainer = document.querySelector(".chrome-search-container") || document.querySelector(".search-box");
   if (!searchInput || !searchContainer) return;
 
   let dropdown = searchContainer.querySelector(".chrome-dropdown");
@@ -561,7 +538,6 @@ function initSearchDropdown() {
       dropdown.classList.remove("active");
       return;
     }
-
     const cleanQuery = query.trim().toLowerCase();
     const suggestions = [];
     const addedKeys = new Set();
@@ -598,7 +574,6 @@ function initSearchDropdown() {
 
     dropdown.innerHTML = "";
     const matches = suggestions.slice(0, 8);
-
     if (matches.length === 0) {
       dropdown.innerHTML = '<div class="suggestion-empty">No matching records found</div>';
     } else {
@@ -614,7 +589,6 @@ function initSearchDropdown() {
         dropdown.appendChild(div);
       });
     }
-
     dropdown.classList.add("active");
   }
 
@@ -653,14 +627,12 @@ window.toggleNotifications = async function () {
     alert("Push notifications are not supported on this browser or page protocol.");
     return;
   }
-
   const permission = await Notification.requestPermission();
   if (permission !== 'granted') {
     alert("Notification permission was denied. Please allow notifications in your browser settings.");
     updateNotificationButtons();
     return;
   }
-
   try {
     const reg = await navigator.serviceWorker.ready;
     let sub = await reg.pushManager.getSubscription();
@@ -670,7 +642,6 @@ window.toggleNotifications = async function () {
         applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
       });
     }
-
     const userIdentifier =
       localStorage.getItem('aics_student_section') ||
       localStorage.getItem('aics_teacher_name') ||
@@ -706,7 +677,6 @@ window.toggleNotifications = async function () {
 function updateNotificationButtons() {
   const isGranted = "Notification" in window && Notification.permission === "granted";
   const buttonIds = ["student-notify-btn", "teacher-notify-btn", "notify-toggle-btn"];
-
   buttonIds.forEach((id) => {
     const btn = document.getElementById(id);
     if (btn) {
@@ -760,8 +730,7 @@ function sendClassNotification(title, body) {
 }
 
 function checkUpcomingClasses() {
-  if (!("Notification" in window) || Notification.permission !== "granted" || !sectionsData.length)
-    return;
+  if (!("Notification" in window) || Notification.permission !== "granted" || !sectionsData.length) return;
 
   const now = new Date();
   const currentDayStr = [
@@ -791,7 +760,6 @@ function checkUpcomingClasses() {
       if (dayIdx !== -1) {
         const key = `${rowIdx}-${dayIdx}`;
         const cell = sec.cells[key];
-
         if (cell && (cell.subject || cell.name)) {
           const timeDiff = classMinutes - currentMinutes;
           const notificationId = `${now.toDateString()}-${sec.code}-${key}`;
@@ -849,10 +817,8 @@ function getScheduleConflicts() {
       if (cell.professor && cell.professor.trim() !== "") {
         const prof = cell.professor.trim().toLowerCase();
         const profDisplay = cell.professor.trim();
-
         if (!profMap[timeSlotKey]) profMap[timeSlotKey] = {};
         if (!profMap[timeSlotKey][prof]) profMap[timeSlotKey][prof] = [];
-
         profMap[timeSlotKey][prof].push({
           secCode: sec.code || sec.title,
           timeSlot: timeSlotLabel,
@@ -867,10 +833,8 @@ function getScheduleConflicts() {
       if (cell.room && cell.room.trim() !== "" && cell.room.trim().toLowerCase() !== "tba") {
         const room = cell.room.trim().toLowerCase();
         const roomDisplay = cell.room.trim();
-
         if (!roomMap[timeSlotKey]) roomMap[timeSlotKey] = {};
         if (!roomMap[timeSlotKey][room]) roomMap[timeSlotKey][room] = [];
-
         roomMap[timeSlotKey][room].push({
           secCode: sec.code || sec.title,
           timeSlot: timeSlotLabel,
@@ -922,16 +886,12 @@ window.updateSlotTime = function (secIdx, rowIdx, val) {
 // HELPER: CALCULATE NEXT TIME SLOT BASED ON LAST TIME
 function calculateNextSlot(lastSlotStr) {
   if (!lastSlotStr) return "8:00-9:00 AM";
-
-  const parts = lastSlotStr.split(/[–-]/);
+  const parts = lastSlotStr.split(/[-–]/);
   if (parts.length < 2) return "8:00-9:00 AM";
 
   let endPart = parts[1].trim();
-
-  // Extract period (AM/PM)
   let ampmMatch = endPart.match(/(AM|PM)/i) || lastSlotStr.match(/(AM|PM)/i);
   let period = ampmMatch ? ampmMatch[0].toUpperCase() : "AM";
-
   let cleanTime = endPart.replace(/(AM|PM)/gi, "").trim();
   let timeParts = cleanTime.split(":");
   if (timeParts.length < 2) return "8:00-9:00 AM";
@@ -939,7 +899,6 @@ function calculateNextSlot(lastSlotStr) {
   let hours = parseInt(timeParts[0], 10);
   let minutes = parseInt(timeParts[1], 10) || 0;
 
-  // Convert to 24-hour format
   let end24 = hours;
   if (period === "PM" && hours !== 12) end24 += 12;
   if (period === "AM" && hours === 12) end24 = 0;
@@ -956,7 +915,6 @@ function calculateNextSlot(lastSlotStr) {
 
   const s = format12(nextStart24);
   const e = format12(nextEnd24);
-
   if (s.p === e.p) {
     return `${s.h12}:${s.minStr}-${e.h12}:${e.minStr} ${e.p}`;
   } else {
@@ -968,15 +926,12 @@ function calculateNextSlot(lastSlotStr) {
 window.addTimeSlot = function (secIdx) {
   if (!sectionsData[secIdx]) return;
   if (!sectionsData[secIdx].slots) sectionsData[secIdx].slots = [];
-
   const slots = sectionsData[secIdx].slots;
   let nextSlot = "8:00-9:00 AM";
-
   if (slots.length > 0) {
     const lastSlot = slots[slots.length - 1];
     nextSlot = calculateNextSlot(lastSlot);
   }
-
   sectionsData[secIdx].slots.push(nextSlot);
   saveSchedulesToDB();
   renderAdminSections();
@@ -1034,7 +989,6 @@ window.addNewSection = async function () {
 
   if (codeInput) codeInput.value = "";
   if (titleInput) titleInput.value = "";
-
   renderAdminSections();
   renderSections();
   alert(`Section "${code}" created successfully!`);
@@ -1050,7 +1004,6 @@ window.filterAdminSections = function () {
     const textContent = card.textContent.toLowerCase();
     const code = (card.dataset.sectionCode || "").toLowerCase();
     const title = (card.dataset.sectionTitle || "").toLowerCase();
-
     if (!val || textContent.includes(val) || code.includes(val) || title.includes(val)) {
       card.style.display = "block";
     } else {
@@ -1070,63 +1023,62 @@ function renderAdminSections() {
   }
 
   const { conflictSet, conflictDetails } = getScheduleConflicts();
-
   let html = `
-  <div class="admin-search-container" style="margin-bottom: 20px;">
-    <input
-      type="text"
-      id="admin-search-input"
-      placeholder="Search sections, subjects, rooms, or faculty..."
-      oninput="filterAdminSections()"
-      value="${window.adminSearchQuery || ''}"
-      style="width: 100%; padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-main); font-size: 0.95rem; box-sizing: border-box;"
-    />
-  </div>`;
+    <div class="admin-search-container" style="margin-bottom: 20px;">
+      <input
+        type="text"
+        id="admin-search-input"
+        placeholder="Search sections, subjects, rooms, or faculty..."
+        oninput="filterAdminSections()"
+        value="${window.adminSearchQuery || ''}"
+        style="width: 100%; padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-main); font-size: 0.95rem; box-sizing: border-box;"
+      />
+    </div>`;
 
   if (conflictDetails.length > 0) {
     html += `
-    <div style="background: rgba(245, 158, 11, 0.15); border: 1px solid var(--warning, #f59e0b); color: var(--text-main); padding: 14px 18px; border-radius: 10px; margin-bottom:20px;">
-      <h4 style="margin:0 0 8px 0; color:var(--warning, #f59e0b); display: flex; align-items:center; gap:8px;">
-        <span>⚠️</span> Class Conflict Warning (${conflictDetails.length} detected)
-      </h4>
-      <ul style="margin:0; padding-left:20px; font-size:0.88rem;">
-        ${conflictDetails.map((item) => `<li style="margin-bottom:4px;">${item}</li>`).join('')}
-      </ul>
-    </div>`;
+      <div style="background: rgba(245, 158, 11, 0.15); border: 1px solid var(--warning, #f59e0b); color: var(--text-main); padding: 14px 18px; border-radius: 10px; margin-bottom:20px;">
+        <h4 style="margin:0 0 8px 0; color:var(--warning, #f59e0b); display: flex; align-items:center; gap:8px;">
+          <span>⚠️</span> Class Conflict Warning (${conflictDetails.length} detected)
+        </h4>
+        <ul style="margin:0; padding-left:20px; font-size:0.88rem;">
+          ${conflictDetails.map((item) => `<li style="margin-bottom:4px;">${item}</li>`).join('')}
+        </ul>
+      </div>`;
   }
 
   sectionsData.forEach((sec, secIdx) => {
     html += `
-    <div class="section-card admin-section-card"
-      data-section-code="${(sec.code || '').toLowerCase()}"
-      data-section-title="${(sec.title || sec.code || '').toLowerCase()}"
-      style="margin-bottom:20px; padding: 18px;">
-      <div style="display: flex; justify-content: space-between; align-items:center; margin-bottom: 12px;">
-        <h3 style="color:var(--primary); margin:0;">${sec.title || sec.code} (${sec.session || 'Regular'})</h3>
-        <div style="display: flex; gap:8px;">
-          <button onclick="addTimeSlot(${secIdx})" class="btn-success">+ Add Time Row</button>
-          <button onclick="deleteSection(${secIdx})" class="btn-danger">Delete Section</button>
+      <div class="section-card admin-section-card"
+        data-section-code="${(sec.code || '').toLowerCase()}"
+        data-section-title="${(sec.title || sec.code || '').toLowerCase()}"
+        style="margin-bottom:20px; padding: 18px;">
+        <div style="display: flex; justify-content: space-between; align-items:center; margin-bottom: 12px;">
+          <h3 style="color:var(--primary); margin:0;">${sec.title || sec.code} (${sec.session || 'Regular'})</h3>
+          <div style="display: flex; gap:8px;">
+            <button onclick="addTimeSlot(${secIdx})" class="btn-success">+ Add Time Row</button>
+            <button onclick="deleteSection(${secIdx})" class="btn-danger">Delete Section</button>
+          </div>
         </div>
-      </div>
-      <div style="overflow-x:auto;">
-        <table class="responsive-table">
-          <thead>
-            <tr>
-              <th style="min-width:130px;">Time Slot</th>
-              ${DAYS_CLEAN.map((d) => `<th>${d}</th>`).join('')}
-              <th style="width:40px;"></th>
-            </tr>
-          </thead>
-          <tbody>`;
+        <div style="overflow-x:auto;">
+          <table class="responsive-table">
+            <thead>
+              <tr>
+                <th style="min-width:130px;">Time Slot</th>
+                ${DAYS_CLEAN.map((d) => `<th>${d}</th>`).join('')}
+                <th style="width:40px;"></th>
+              </tr>
+            </thead>
+            <tbody>`;
 
     (sec.slots || []).forEach((slot, rowIdx) => {
       html += `
-      <tr>
-        <td class="time-cell">
-          <input type="text" placeholder="e.g. 7:00-8:00 AM"
-            value="${slot}" onchange="updateSlotTime(${secIdx}, ${rowIdx}, this.value)"
-            style="width:100%; background: transparent; border:none; border-bottom:1px solid var(--primary); color:var(--text-main); font-weight:600; padding:2px; box-sizing:border-box;">
-        </td>`;
+        <tr>
+          <td class="time-cell">
+            <input type="text" placeholder="e.g. 7:00-8:00 AM"
+              value="${slot}" onchange="updateSlotTime(${secIdx}, ${rowIdx}, this.value)"
+              style="width:100%; background: transparent; border:none; border-bottom:1px solid var(--primary); color:var(--text-main); font-weight: 600; padding:2px; box-sizing:border-box;">
+          </td>`;
 
       DAYS.forEach((d, colIdx) => {
         const key = `${rowIdx}-${colIdx}`;
@@ -1134,23 +1086,22 @@ function renderAdminSections() {
         const sub = cell ? cell.subject || cell.name || "" : "";
         const prof = cell ? cell.professor || "" : "";
         const room = cell ? cell.room || "" : "";
-
         const isConflicted = conflictSet.has(`${secIdx}-${key}`);
         const cellClass = isConflicted ? 'class-cell highlight' : 'class-cell';
 
         html += `
-        <td class="${cellClass}" style="padding:6px; min-width: 140px;">
-          <input type="text" placeholder="Subject Code" value="${sub}"
-            onchange="updateCellData(${secIdx}, '${key}', 'subject', this.value)"
-            style="width:100%; background:transparent; border:none; border-bottom:1px solid var(--border-color); color:var(--text-main); font-weight:600; margin-bottom:4px; box-sizing:border-box;">
-          <input type="text" placeholder="Professor" value="${prof}"
-            onchange="updateCellData(${secIdx}, '${key}', 'professor', this.value)"
-            style="width:100%; background:transparent; border:none; border-bottom:1px solid var(--border-color); color:var(--text-muted); margin-bottom:4px; box-sizing:border-box;">
-          <input type="text" placeholder="Room" value="${room}"
-            onchange="updateCellData(${secIdx}, '${key}', 'room', this.value)"
-            style="width:100%; background:transparent; border:none; color:var(--text-muted); box-sizing:border-box;">
-          ${isConflicted ? '<div style="display:inline-block; background-color: var(--warning, #eab308); color: var(--bg-card, #30f172a); padding:2px 6px; border-radius: 4px; font-size:0.75rem; font-weight:700; margin-top: 4px;">CONFLICT</div>' : ''}
-        </td>`;
+          <td class="${cellClass}" style="padding:6px; min-width: 140px;">
+            <input type="text" placeholder="Subject Code" value="${sub}"
+              onchange="updateCellData(${secIdx}, '${key}', 'subject', this.value)"
+              style="width:100%; background:transparent; border:none; border-bottom:1px solid var(--border-color); color:var(--text-main); font-weight:600; margin-bottom:4px; box-sizing:border-box;">
+            <input type="text" placeholder="Professor" value="${prof}"
+              onchange="updateCellData(${secIdx}, '${key}', 'professor', this.value)"
+              style="width:100%; background:transparent; border:none; border-bottom:1px solid var(--border-color); color:var(--text-muted); margin-bottom:4px; box-sizing:border-box;">
+            <input type="text" placeholder="Room" value="${room}"
+              onchange="updateCellData(${secIdx}, '${key}', 'room', this.value)"
+              style="width:100%; background:transparent; border:none; color:var(--text-muted); box-sizing:border-box;">
+            ${isConflicted ? '<div style="display:inline-block; background-color: var(--warning, #eab308); color: var(--bg-card, #000); padding:2px 6px; border-radius: 4px; font-size:0.75rem; font-weight:700; margin-top: 4px;">CONFLICT</div>' : ''}
+          </td>`;
       });
 
       html += `
@@ -1241,7 +1192,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   document.getElementById("hamburger-btn")?.addEventListener("click", window.toggleHamburger);
-
   document.addEventListener("click", (e) => {
     const menu = document.getElementById("hamburger-menu");
     const btn = document.getElementById("hamburger-btn");
@@ -1288,16 +1238,16 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   document.getElementById("subject-card-close-btn")?.addEventListener("click", () => {
-    document.getElementById("subject-details-overlay").classList.remove("open");
+    document.getElementById("subject-details-overlay")?.classList.remove("open");
   });
 
   initSearchDropdown();
   renderMobileTabs();
   window.loadSchedules();
-});
 
-setInterval(() => {
-  if (typeof window.loadSchedules === "function") {
-    window.loadSchedules();
-  }
-}, 15000);
+  setInterval(() => {
+    if (typeof window.loadSchedules === "function") {
+      window.loadSchedules();
+    }
+  }, 15000);
+});
