@@ -377,6 +377,7 @@ window.addNewSection = async function () {
   const defaultSlots = getDefaultSlotsForSession(session);
 
   const newSec = {
+    id: crypto.randomUUID(), // Automatically generates a UUID to satisfy Supabase NOT NULL constraint
     code: code,
     title: title,
     session: session,
@@ -520,7 +521,7 @@ window.editSection = function (identifier) {
           <input type="text" class="edit-prof-input" placeholder="Teacher" value="${cell.professor || ''}"
             style="width:100%; border:none; background:transparent; color:var(--text-muted); font-size:0.7rem; text-align:center; padding:1px 0; outline:none; box-sizing:border-box;">
           <input type="text" class="edit-room-input" placeholder="Room" value="${cell.room || ''}"
-  style="width:100%; border:none; background:transparent; color:var(--primary); font-size:0.68rem; font-weight:600; text-align:center; padding:1px 0; outline:none; box-sizing:border-box;">
+            style="width:100%; border:none; background:transparent; color:var(--primary); font-size:0.68rem; font-weight:600; text-align:center; padding:1px 0; outline:none; box-sizing:border-box;">
         </td>
       `;
     });
@@ -1005,7 +1006,7 @@ function buildSuggestions(query) {
     return;
   }
 
- dropdown.innerHTML = suggestions.slice(0, 6).map(s => `
+  dropdown.innerHTML = suggestions.slice(0, 6).map(s => `
     <div class="dropdown-item" onclick="selectSuggestion('${s.text.replace(/'/g, "\\'")}')">
       <span>${s.text}</span>
       <small style="opacity:0.6; margin-left:8px;">${s.type}</small>
@@ -1098,4 +1099,3 @@ document.addEventListener("DOMContentLoaded", () => {
   initSearchDropdown();
   updateNotificationButtons();
 });
-          
