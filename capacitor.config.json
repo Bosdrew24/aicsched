@@ -6,13 +6,12 @@
     "androidScheme": "https"
   },
   "plugins": {
-  "LocalNotifications": {
-    "smallIcon": "ic_stat_icon_config_sample",
-    "iconColor": "#16a34a"
-  },
-  "PushNotifications": {
-    "presentationOptions": ["badge", "sound", "alert"]
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_icon_config_sample",
+      "iconColor": "#f6a34a"
+    },
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"]
+    }
   }
 }
-
-
