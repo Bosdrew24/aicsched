@@ -13,7 +13,6 @@ let allSections = [];
 
 // ==========================================
 // 1. THEME SWITCHER LOGIC (DARK / LIGHT MODE)
-// Syncs with CSS variables (--bg-main, --card-bg, etc.)
 // ==========================================
 function initTheme() {
   const savedTheme = localStorage.getItem("aics_theme") || "dark";
@@ -23,7 +22,6 @@ function initTheme() {
 function applyTheme(theme) {
   const isLight = theme === "light";
 
-  // Apply theme attribute & classes across document hierarchy
   document.documentElement.setAttribute("data-theme", theme);
   document.body.setAttribute("data-theme", theme);
 
@@ -55,7 +53,6 @@ function updateThemeUI(isLight) {
 function getDefaultSlotsForSession(session = "MORNING") {
   const sess = (session || "MORNING").toUpperCase();
   if (sess === "AFTERNOON") {
-    // Afternoon: 09:00 to 20:00
     return [
       "09:00 - 10:00", "10:00 - 11:00", "11:00 - 12:00",
       "12:00 - 13:00", "13:00 - 14:00", "14:00 - 15:00",
@@ -63,13 +60,11 @@ function getDefaultSlotsForSession(session = "MORNING") {
       "18:00 - 19:00", "19:00 - 20:00"
     ];
   } else if (sess === "EVENING") {
-    // Evening: 15:00 to 21:00
     return [
       "15:00 - 16:00", "16:00 - 17:00", "17:00 - 18:00",
       "18:00 - 19:00", "19:00 - 20:00", "20:00 - 21:00"
     ];
   } else {
-    // Morning: 07:00 to 14:00
     return [
       "07:00 - 08:00", "08:00 - 09:00", "09:00 - 10:00",
       "10:00 - 11:00", "11:00 - 12:00", "12:00 - 13:00",
@@ -216,7 +211,9 @@ window.submitStudentLogin = function () {
   isViewingAllSections = false;
   checkStudentAuth();
   
-  // Auto-schedule reminders upon login if notifications are enabled
+  // Create initial comparison snapshot on login
+  checkForScheduleUpdates(sectionCode, true);
+
   if (localStorage.getItem("aics_notifications_enabled") === "true") {
     scheduleClassNotifications();
   }
@@ -332,6 +329,13 @@ window.loadSchedules = async function () {
     if (Array.isArray(data)) {
       sectionsData = data;
       allSections = data;
+
+      // Check if student section changed/updated on fetch
+      const savedSection = localStorage.getItem("aics_student_section");
+      if (savedSection) {
+        checkForScheduleUpdates(savedSection, false);
+      }
+
       renderSections();
       populateTeacherDropdown();
       renderTeacherSchedule();
@@ -341,6 +345,54 @@ window.loadSchedules = async function () {
     console.error("Error loading schedules:", err);
   }
 };
+
+// Automated section adjustment alert checker
+async function checkForScheduleUpdates(sectionCode, isInitialSetup = false) {
+  if (!sectionCode) return;
+
+  const targetSec = sectionsData.find(s => 
+    (s.code && s.code.toLowerCase() === sectionCode.toLowerCase()) || 
+    (s.title && s.title.toLowerCase().includes(sectionCode.toLowerCase()))
+  );
+
+  if (!targetSec) return;
+
+  const snapshotKey = `aics_snapshot_${targetSec.code || sectionCode}`;
+  const currentSnapshot = JSON.stringify(targetSec.cells || {});
+  const savedSnapshot = localStorage.getItem(snapshotKey);
+
+  if (!isInitialSetup && savedSnapshot && savedSnapshot !== currentSnapshot) {
+    // Modification detected! Fire notification
+    triggerSectionUpdateAlert(targetSec.code);
+  }
+
+  // Update stored snapshot
+  localStorage.setItem(snapshotKey, currentSnapshot);
+}
+
+async function triggerSectionUpdateAlert(sectionCode) {
+  const title = `⚠️ Schedule Modified: ${sectionCode}`;
+  const body = `Your room or teacher assignment has been updated by administration.`;
+
+  if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications) {
+    try {
+      await window.Capacitor.Plugins.LocalNotifications.schedule({
+        notifications: [{
+          title: title,
+          body: body,
+          id: 999888,
+          schedule: { at: new Date(new Date().getTime() + 1000) },
+          smallIcon: 'res://ic_stat_icon_config_sample',
+          allowWhileIdle: true
+        }]
+      });
+    } catch (e) {
+      console.error("Error firing section update notification:", e);
+    }
+  } else if ("Notification" in window && Notification.permission === "granted") {
+    new Notification(title, { body: body });
+  }
+}
 
 function renderAdminSections() {
   const container = document.getElementById("admin-sections-list");
@@ -1047,7 +1099,6 @@ window.toggleNotifications = async function () {
         localStorage.setItem("aics_notifications_enabled", "true");
         alert("Phone alerts enabled! Scheduling 1hr, 30min, and 10min reminders...");
         
-        // Schedule multi-interval alarms for the active student section
         await scheduleClassNotifications();
         updateNotificationButtons();
       } else {
@@ -1072,7 +1123,6 @@ async function scheduleClassNotifications() {
     return;
   }
 
-  // Find active student section data
   const targetSec = sectionsData.find(s => 
     (s.code && s.code.toLowerCase() === savedSection.toLowerCase()) || 
     (s.title && s.title.toLowerCase().includes(savedSection.toLowerCase()))
@@ -1083,7 +1133,6 @@ async function scheduleClassNotifications() {
   let notificationsToSchedule = [];
   let notificationId = 1;
 
-  // Offset intervals in minutes: 1 hour (60m), 30 minutes (30m), 10 minutes (10m)
   const reminderOffsets = [60, 30, 10];
 
   targetSec.slots.forEach((slot, rowIdx) => {
@@ -1101,7 +1150,6 @@ async function scheduleClassNotifications() {
         const subName = cell.subject || cell.name;
         const roomName = cell.room || "TBA";
 
-        // Create reminders for 60m, 30m, and 10m prior
         reminderOffsets.forEach((offset) => {
           let alertHour = baseClassHour;
           let alertMinute = baseClassMinute - offset;
@@ -1126,6 +1174,7 @@ async function scheduleClassNotifications() {
             schedule: { at: scheduleDate, repeating: true, every: 'week' },
             sound: null,
             smallIcon: 'res://ic_stat_icon_config_sample',
+            allowWhileIdle: true // Bypasses Android Doze/Deep Sleep mode
           });
         });
       }
@@ -1134,13 +1183,11 @@ async function scheduleClassNotifications() {
 
   if (notificationsToSchedule.length > 0) {
     try {
-      // Clear old reminders to avoid duplicate flooding
       const pending = await LocalNotifications.getPending();
       if (pending.notifications.length > 0) {
         await LocalNotifications.cancel(pending);
       }
 
-      // Schedule new device alarms
       await LocalNotifications.schedule({ notifications: notificationsToSchedule });
       console.log(`Successfully scheduled ${notificationsToSchedule.length} multi-interval reminders.`);
     } catch (e) {
