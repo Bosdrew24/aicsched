@@ -65,7 +65,7 @@ function checkStudentAuth() {
 
     if (isViewingAllSections) {
       if (sessionFilterBar) sessionFilterBar.style.display = "flex";
-      if (searchContainer) searchContainer.style.display = "";
+      if (searchContainer) searchContainer.style.display = "block";
       if (badge) badge.textContent = "Section: All Sections";
       if (searchInput) searchInput.value = "";
     } else {
@@ -272,15 +272,13 @@ function populateTeacherDropdown() {
   });
 }
 
-// RENDER TEACHER SCHEDULE AS A TIMETABLE GRID
 window.renderTeacherSchedule = function () {
   const container = document.getElementById("teacher-schedule-container");
   if (!container) return;
-
   const selectedTeacher = localStorage.getItem("aics_teacher_name") || "";
+
   if (!selectedTeacher) {
-    container.innerHTML = `<div style="color: var(--text-muted); text-align:center; padding:30px;">
-      Please select your name to view your assigned classes.</div>`;
+    container.innerHTML = '<div style="color: var(--text-muted); text-align:center; padding:30px;">Please select your name to view your assigned classes.</div>';
     return;
   }
 
@@ -292,13 +290,7 @@ window.renderTeacherSchedule = function () {
   });
 
   if (masterSlots.length === 0) {
-    masterSlots = [
-      "7:00-8:00 AM",
-      "8:00-9:00 AM",
-      "9:00-10:00 AM",
-      "10:00-11:00 AM",
-      "11:00-12:00 PM"
-    ];
+    masterSlots = ["7:00-8:00 AM", "8:00-9:00 AM", "9:00-10:00 AM", "10:00-11:00 AM", "11:00-12:00 PM"];
   }
 
   let gridMap = {};
@@ -315,7 +307,7 @@ window.renderTeacherSchedule = function () {
           if (!gridMap[mapKey]) gridMap[mapKey] = [];
           gridMap[mapKey].push({
             subject: cell.subject || cell.name || "-",
-            section: sec.code || sec.title || "-",
+            section: sec.code || sec.title || "",
             room: cell.room || "TBA"
           });
           hasClasses = true;
@@ -325,8 +317,7 @@ window.renderTeacherSchedule = function () {
   });
 
   if (!hasClasses) {
-    container.innerHTML = `<div style="color: var(--text-muted); text-align:center; padding:30px;">
-      No assigned classes found for <strong>${selectedTeacher}</strong>.</div>`;
+    container.innerHTML = `<div style="color: var(--text-muted); text-align:center; padding:30px;">No assigned classes found for <strong>${selectedTeacher}</strong>.</div>`;
     return;
   }
 
@@ -351,8 +342,7 @@ window.renderTeacherSchedule = function () {
       if (items && items.length > 0) {
         html += '<td class="class-cell">';
         items.forEach((item) => {
-          html += `<div class="cell-code">${item.subject}</div>
-                   <div class="cell-name">Sec: ${item.section} (${item.room})</div>`;
+          html += `<div class="cell-code">${item.subject}</div><div class="cell-name">Sec: ${item.section} (${item.room})</div>`;
         });
         html += '</td>';
       } else {
@@ -395,7 +385,7 @@ function renderSections() {
     const tableDiv = document.createElement("div");
     tableDiv.className = "schedule-table-container";
 
-    let html = `<table class="responsive-table"><thead><tr><th>TIME</th>`;
+    let html = '<table class="responsive-table"><thead><tr><th>TIME</th>';
     DAYS.forEach((d) => (html += `<th>${d}</th>`));
     html += '</tr></thead><tbody>';
 
@@ -416,7 +406,6 @@ function renderSections() {
       });
       html += '</tr>';
     });
-
     html += '</tbody></table>';
     tableDiv.innerHTML = html;
 
@@ -449,12 +438,9 @@ function renderSections() {
   applyFilters();
 }
 
-// RENDER MOBILE DAY TABS (DISABLED / CLEARED FOR FULL HORIZONTAL GRID)
 function renderMobileTabs() {
   const container = document.getElementById("mobile-day-tabs");
-  if (container) {
-    container.innerHTML = "";
-  }
+  if (container) container.innerHTML = "";
 }
 
 function updateMobileVis() {
@@ -473,15 +459,9 @@ function applyFilters() {
       const targetSection = savedSection.trim().toLowerCase();
       const secCode = (card.dataset.sectionCode || "").trim().toLowerCase();
       const secTitle = (card.dataset.sectionTitle || "").trim().toLowerCase();
-      const isMatch =
-        secCode === targetSection ||
-        secTitle === targetSection ||
-        secCode.includes(targetSection) ||
-        secTitle.includes(targetSection);
+      const isMatch = secCode === targetSection || secTitle === targetSection || secCode.includes(targetSection) || secTitle.includes(targetSection);
       card.style.display = isMatch ? "block" : "none";
-      card.querySelectorAll(".class-cell").forEach((c) => {
-        c.classList.remove("highlight", "dimmed");
-      });
+      card.querySelectorAll(".class-cell").forEach((c) => c.classList.remove("highlight", "dimmed"));
       return;
     }
 
@@ -492,9 +472,7 @@ function applyFilters() {
 
     if (!val) {
       card.style.display = sessionMatches ? "block" : "none";
-      card.querySelectorAll(".class-cell").forEach((c) => {
-        c.classList.remove("highlight", "dimmed");
-      });
+      card.querySelectorAll(".class-cell").forEach((c) => c.classList.remove("highlight", "dimmed"));
       return;
     }
 
@@ -612,8 +590,8 @@ function initSearchDropdown() {
 
 // NOTIFICATION & PHONE ALERT UTILITIES
 function urlBase64ToUint8Array(base64String) {
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
   const rawData = window.atob(base64);
   const outputArray = new Uint8Array(rawData.length);
   for (let i = 0; i < rawData.length; ++i) {
@@ -627,12 +605,14 @@ window.toggleNotifications = async function () {
     alert("Push notifications are not supported on this browser or page protocol.");
     return;
   }
+
   const permission = await Notification.requestPermission();
   if (permission !== 'granted') {
     alert("Notification permission was denied. Please allow notifications in your browser settings.");
     updateNotificationButtons();
     return;
   }
+
   try {
     const reg = await navigator.serviceWorker.ready;
     let sub = await reg.pushManager.getSubscription();
@@ -642,10 +622,12 @@ window.toggleNotifications = async function () {
         applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
       });
     }
-    const userIdentifier =
+
+    const userIdentifier = (
       localStorage.getItem('aics_student_section') ||
       localStorage.getItem('aics_teacher_name') ||
-      'General';
+      'General'
+    ).trim().toLowerCase();
 
     const { error } = await db.from('push_subscriptions').insert([
       {
@@ -704,11 +686,9 @@ function parseTimeToMinutes(timeStr) {
 
   let hours = parseInt(parts[0], 10);
   let minutes = parseInt(parts[1], 10);
-
   if (isPM && hours < 12) hours += 12;
   if (isAM && hours === 12) hours = 0;
   if (!isAM && !isPM && hours >= 1 && hours <= 6) hours += 12;
-
   return hours * 60 + minutes;
 }
 
@@ -769,16 +749,13 @@ function checkUpcomingClasses() {
             const profName = cell.professor || "Faculty";
             const roomName = cell.room || "TBA";
 
-            // Teacher Alert Matching
             if (savedTeacher && cell.professor && cell.professor.trim().toLowerCase() === savedTeacher) {
               notifiedClasses.add(notificationId);
               sendClassNotification(
                 `Upcoming Class: ${classTitle}`,
                 `Teaching section ${sec.code} in Room ${roomName} starts in ${timeDiff} minutes (${slot}).`
               );
-            }
-            // Student Alert Matching
-            else if (savedStudentSection && (secCode === savedStudentSection || secCode.includes(savedStudentSection))) {
+            } else if (savedStudentSection && (secCode === savedStudentSection || secCode.includes(savedStudentSection))) {
               notifiedClasses.add(notificationId);
               sendClassNotification(
                 `Upcoming Class: ${classTitle}`,
@@ -792,7 +769,6 @@ function checkUpcomingClasses() {
   });
 }
 
-// PERIODIC SCHEDULE CHECK (Runs every 30 seconds)
 setInterval(checkUpcomingClasses, 30000);
 
 // CONFLICT DETECTION & NOTIFICATIONS
@@ -807,7 +783,6 @@ function getScheduleConflicts() {
     Object.keys(sec.cells).forEach((cellKey) => {
       const cell = sec.cells[cellKey];
       if (!cell) return;
-
       const [rowIdx, colIdx] = cellKey.split("-");
       const rawSlotLabel = sec.slots && sec.slots[rowIdx] ? sec.slots[rowIdx].trim() : `ROW-${rowIdx}`;
       const timeSlotLabel = rawSlotLabel.toUpperCase();
@@ -857,9 +832,7 @@ function getScheduleConflicts() {
           conflictDetails.push(
             `${first.type} Conflict: "${first.name}" is double-booked in ${involvedSections} on ${first.dayName} (${first.timeSlot}).`
           );
-          matches.forEach((item) => {
-            conflictSet.add(`${item.secIdx}-${item.cellKey}`);
-          });
+          matches.forEach((item) => conflictSet.add(`${item.secIdx}-${item.cellKey}`));
         }
       });
     });
@@ -883,12 +856,10 @@ window.updateSlotTime = function (secIdx, rowIdx, val) {
   renderTeacherSchedule();
 };
 
-// HELPER: CALCULATE NEXT TIME SLOT BASED ON LAST TIME
 function calculateNextSlot(lastSlotStr) {
   if (!lastSlotStr) return "8:00-9:00 AM";
   const parts = lastSlotStr.split(/[-–]/);
   if (parts.length < 2) return "8:00-9:00 AM";
-
   let endPart = parts[1].trim();
   let ampmMatch = endPart.match(/(AM|PM)/i) || lastSlotStr.match(/(AM|PM)/i);
   let period = ampmMatch ? ampmMatch[0].toUpperCase() : "AM";
@@ -897,8 +868,7 @@ function calculateNextSlot(lastSlotStr) {
   if (timeParts.length < 2) return "8:00-9:00 AM";
 
   let hours = parseInt(timeParts[0], 10);
-  let minutes = parseInt(timeParts[1], 10) || 0;
-
+  let minutes = parseInt(timeParts[1], 10);
   let end24 = hours;
   if (period === "PM" && hours !== 12) end24 += 12;
   if (period === "AM" && hours === 12) end24 = 0;
@@ -922,7 +892,6 @@ function calculateNextSlot(lastSlotStr) {
   }
 }
 
-// DYNAMIC TIME INCREMENT ON ADD ROW
 window.addTimeSlot = function (secIdx) {
   if (!sectionsData[secIdx]) return;
   if (!sectionsData[secIdx].slots) sectionsData[secIdx].slots = [];
@@ -1004,6 +973,7 @@ window.filterAdminSections = function () {
     const textContent = card.textContent.toLowerCase();
     const code = (card.dataset.sectionCode || "").toLowerCase();
     const title = (card.dataset.sectionTitle || "").toLowerCase();
+
     if (!val || textContent.includes(val) || code.includes(val) || title.includes(val)) {
       card.style.display = "block";
     } else {
@@ -1049,10 +1019,7 @@ function renderAdminSections() {
 
   sectionsData.forEach((sec, secIdx) => {
     html += `
-      <div class="section-card admin-section-card"
-        data-section-code="${(sec.code || '').toLowerCase()}"
-        data-section-title="${(sec.title || sec.code || '').toLowerCase()}"
-        style="margin-bottom:20px; padding: 18px;">
+      <div class="section-card admin-section-card" data-section-code="${(sec.code || '').toLowerCase()}" data-section-title="${(sec.title || sec.code || '').toLowerCase()}" style="margin-bottom:20px; padding: 18px;">
         <div style="display: flex; justify-content: space-between; align-items:center; margin-bottom: 12px;">
           <h3 style="color:var(--primary); margin:0;">${sec.title || sec.code} (${sec.session || 'Regular'})</h3>
           <div style="display: flex; gap:8px;">
@@ -1075,9 +1042,7 @@ function renderAdminSections() {
       html += `
         <tr>
           <td class="time-cell">
-            <input type="text" placeholder="e.g. 7:00-8:00 AM"
-              value="${slot}" onchange="updateSlotTime(${secIdx}, ${rowIdx}, this.value)"
-              style="width:100%; background: transparent; border:none; border-bottom:1px solid var(--primary); color:var(--text-main); font-weight: 600; padding:2px; box-sizing:border-box;">
+            <input type="text" placeholder="e.g. 7:00-8:00 AM" value="${slot}" onchange="updateSlotTime(${secIdx}, ${rowIdx}, this.value)" style="width:100%; background: transparent; border:none; border-bottom:1px solid var(--primary); color:var(--text-main); font-weight: 600; padding:2px; box-sizing:border-box;">
           </td>`;
 
       DAYS.forEach((d, colIdx) => {
@@ -1091,25 +1056,18 @@ function renderAdminSections() {
 
         html += `
           <td class="${cellClass}" style="padding:6px; min-width: 140px;">
-            <input type="text" placeholder="Subject Code" value="${sub}"
-              onchange="updateCellData(${secIdx}, '${key}', 'subject', this.value)"
-              style="width:100%; background:transparent; border:none; border-bottom:1px solid var(--border-color); color:var(--text-main); font-weight:600; margin-bottom:4px; box-sizing:border-box;">
-            <input type="text" placeholder="Professor" value="${prof}"
-              onchange="updateCellData(${secIdx}, '${key}', 'professor', this.value)"
-              style="width:100%; background:transparent; border:none; border-bottom:1px solid var(--border-color); color:var(--text-muted); margin-bottom:4px; box-sizing:border-box;">
-            <input type="text" placeholder="Room" value="${room}"
-              onchange="updateCellData(${secIdx}, '${key}', 'room', this.value)"
-              style="width:100%; background:transparent; border:none; color:var(--text-muted); box-sizing:border-box;">
+            <input type="text" placeholder="Subject Code" value="${sub}" onchange="updateCellData(${secIdx}, '${key}', 'subject', this.value)" style="width:100%; background:transparent; border:none; border-bottom:1px solid var(--border-color); color:var(--text-main); font-weight: 600; margin-bottom:4px; box-sizing:border-box;">
+            <input type="text" placeholder="Professor" value="${prof}" onchange="updateCellData(${secIdx}, '${key}', 'professor', this.value)" style="width:100%; background:transparent; border:none; border-bottom:1px solid var(--border-color); color:var(--text-muted); margin-bottom:4px; box-sizing:border-box;">
+            <input type="text" placeholder="Room" value="${room}" onchange="updateCellData(${secIdx}, '${key}', 'room', this.value)" style="width:100%; background:transparent; border:none; color:var(--text-muted); box-sizing:border-box;">
             ${isConflicted ? '<div style="display:inline-block; background-color: var(--warning, #eab308); color: var(--bg-card, #000); padding:2px 6px; border-radius: 4px; font-size:0.75rem; font-weight:700; margin-top: 4px;">CONFLICT</div>' : ''}
           </td>`;
       });
 
       html += `
-        <td style="padding: 6px; text-align:center;">
-          <button onclick="deleteTimeSlot(${secIdx}, ${rowIdx})"
-            style="background:transparent; border: none; color: var(--danger); cursor:pointer; font-weight:bold;">X</button>
-        </td>
-      </tr>`;
+          <td style="padding: 6px; text-align:center;">
+            <button onclick="deleteTimeSlot(${secIdx}, ${rowIdx})" style="background:transparent; border: none; color: var(--danger); cursor:pointer; font-weight:bold;">X</button>
+          </td>
+        </tr>`;
     });
 
     html += '</tbody></table></div></div>';
@@ -1192,6 +1150,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   document.getElementById("hamburger-btn")?.addEventListener("click", window.toggleHamburger);
+
   document.addEventListener("click", (e) => {
     const menu = document.getElementById("hamburger-menu");
     const btn = document.getElementById("hamburger-btn");
