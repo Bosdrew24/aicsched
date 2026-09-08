@@ -215,6 +215,11 @@ window.submitStudentLogin = function () {
   localStorage.setItem("aics_student_section", sectionCode);
   isViewingAllSections = false;
   checkStudentAuth();
+  
+  // Auto-schedule reminders upon login if notifications are enabled
+  if (localStorage.getItem("aics_notifications_enabled") === "true") {
+    scheduleClassNotifications();
+  }
 };
 
 window.logoutStudent = function () {
@@ -377,7 +382,7 @@ window.addNewSection = async function () {
   const defaultSlots = getDefaultSlotsForSession(session);
 
   const newSec = {
-    id: crypto.randomUUID(), // Automatically generates a UUID to satisfy Supabase NOT NULL constraint
+    id: crypto.randomUUID(),
     code: code,
     title: title,
     session: session,
@@ -1040,7 +1045,10 @@ window.toggleNotifications = async function () {
       const perm = await LocalNotifications.requestPermissions();
       if (perm.display === "granted") {
         localStorage.setItem("aics_notifications_enabled", "true");
-        alert("Phone alerts enabled!");
+        alert("Phone alerts enabled! Scheduling 1hr, 30min, and 10min reminders...");
+        
+        // Schedule multi-interval alarms for the active student section
+        await scheduleClassNotifications();
         updateNotificationButtons();
       } else {
         alert("Notification permission was denied.");
@@ -1053,6 +1061,93 @@ window.toggleNotifications = async function () {
     fallbackWebNotification();
   }
 };
+
+async function scheduleClassNotifications() {
+  if (!window.Capacitor || !window.Capacitor.Plugins || !window.Capacitor.Plugins.LocalNotifications) return;
+  const LocalNotifications = window.Capacitor.Plugins.LocalNotifications;
+
+  const savedSection = localStorage.getItem("aics_student_section");
+  if (!savedSection) {
+    console.log("No student section set for notifications.");
+    return;
+  }
+
+  // Find active student section data
+  const targetSec = sectionsData.find(s => 
+    (s.code && s.code.toLowerCase() === savedSection.toLowerCase()) || 
+    (s.title && s.title.toLowerCase().includes(savedSection.toLowerCase()))
+  );
+
+  if (!targetSec || !targetSec.cells || !targetSec.slots) return;
+
+  let notificationsToSchedule = [];
+  let notificationId = 1;
+
+  // Offset intervals in minutes: 1 hour (60m), 30 minutes (30m), 10 minutes (10m)
+  const reminderOffsets = [60, 30, 10];
+
+  targetSec.slots.forEach((slot, rowIdx) => {
+    const match = slot.match(/(\d{1,2}):(\d{2})/);
+    if (!match) return;
+
+    let baseClassHour = parseInt(match[1], 10);
+    let baseClassMinute = parseInt(match[2], 10);
+
+    DAYS.forEach((dayName, colIdx) => {
+      const cellKey = `${rowIdx}-${colIdx}`;
+      const cell = targetSec.cells[cellKey];
+
+      if (cell && (cell.subject || cell.name)) {
+        const subName = cell.subject || cell.name;
+        const roomName = cell.room || "TBA";
+
+        // Create reminders for 60m, 30m, and 10m prior
+        reminderOffsets.forEach((offset) => {
+          let alertHour = baseClassHour;
+          let alertMinute = baseClassMinute - offset;
+
+          while (alertMinute < 0) {
+            alertMinute += 60;
+            alertHour -= 1;
+          }
+          if (alertHour < 0) {
+            alertHour += 24;
+          }
+
+          let scheduleDate = new Date();
+          scheduleDate.setHours(alertHour, alertMinute, 0, 0);
+
+          let timeLabel = offset === 60 ? "in 1 hour" : (offset === 30 ? "in 30 minutes" : "in 10 minutes");
+
+          notificationsToSchedule.push({
+            title: `Upcoming Class (${offset}m): ${subName}`,
+            body: `Room ${roomName} starts ${timeLabel} (${slot}).`,
+            id: notificationId++,
+            schedule: { at: scheduleDate, repeating: true, every: 'week' },
+            sound: null,
+            smallIcon: 'res://ic_stat_icon_config_sample',
+          });
+        });
+      }
+    });
+  });
+
+  if (notificationsToSchedule.length > 0) {
+    try {
+      // Clear old reminders to avoid duplicate flooding
+      const pending = await LocalNotifications.getPending();
+      if (pending.notifications.length > 0) {
+        await LocalNotifications.cancel(pending);
+      }
+
+      // Schedule new device alarms
+      await LocalNotifications.schedule({ notifications: notificationsToSchedule });
+      console.log(`Successfully scheduled ${notificationsToSchedule.length} multi-interval reminders.`);
+    } catch (e) {
+      console.error("Error scheduling local notifications:", e);
+    }
+  }
+}
 
 function fallbackWebNotification() {
   if (!("Notification" in window)) {
