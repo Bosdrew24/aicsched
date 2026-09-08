@@ -1084,28 +1084,53 @@ window.selectSuggestion = function (text) {
 };
 
 // ==========================================
-// 13. NOTIFICATION & SYSTEM ALERT HANDLERS
+// 13. NOTIFICATION & SYSTEM ALERT HANDLERS (FCM INTEGRATION)
 // ==========================================
 window.enablePhoneAlerts = async function () {
   window.toggleNotifications();
 };
 
 window.toggleNotifications = async function () {
-  if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications) {
+  if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.PushNotifications) {
     try {
-      const LocalNotifications = window.Capacitor.Plugins.LocalNotifications;
-      const perm = await LocalNotifications.requestPermissions();
-      if (perm.display === "granted") {
-        localStorage.setItem("aics_notifications_enabled", "true");
-        alert("Phone alerts enabled! Scheduling 1hr, 30min, and 10min reminders...");
-        
-        await scheduleClassNotifications();
-        updateNotificationButtons();
-      } else {
-        alert("Notification permission was denied.");
+      const PushNotifications = window.Capacitor.Plugins.PushNotifications;
+      
+      let permStatus = await PushNotifications.checkPermissions();
+      if (permStatus.receive === 'prompt') {
+        permStatus = await PushNotifications.requestPermissions();
       }
+
+      if (permStatus.receive !== 'granted') {
+        alert("Push notification permission was denied.");
+        return;
+      }
+
+      await PushNotifications.register();
+
+      PushNotifications.addListener('registration', async (token) => {
+        console.log('FCM Token successfully received:', token.value);
+        localStorage.setItem("aics_fcm_token", token.value);
+        await saveDeviceTokenToSupabase(token.value);
+      });
+
+      PushNotifications.addListener('registrationError', (error) => {
+        console.error('Error during push registration:', JSON.stringify(error));
+      });
+
+      PushNotifications.addListener('pushNotificationReceived', (notification) => {
+        console.log('Push notification received:', JSON.stringify(notification));
+      });
+
+      PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
+        console.log('Push notification action performed:', JSON.stringify(notification));
+      });
+
+      localStorage.setItem("aics_notifications_enabled", "true");
+      alert("True push notifications enabled successfully!");
+      updateNotificationButtons();
+
     } catch (err) {
-      console.error("Capacitor LocalNotification error:", err);
+      console.error("Capacitor PushNotification error:", err);
       fallbackWebNotification();
     }
   } else {
@@ -1113,87 +1138,31 @@ window.toggleNotifications = async function () {
   }
 };
 
-async function scheduleClassNotifications() {
-  if (!window.Capacitor || !window.Capacitor.Plugins || !window.Capacitor.Plugins.LocalNotifications) return;
-  const LocalNotifications = window.Capacitor.Plugins.LocalNotifications;
-
+async function saveDeviceTokenToSupabase(fcmToken) {
   const savedSection = localStorage.getItem("aics_student_section");
-  if (!savedSection) {
-    console.log("No student section set for notifications.");
-    return;
-  }
+  if (!savedSection || !fcmToken) return;
 
-  const targetSec = sectionsData.find(s => 
-    (s.code && s.code.toLowerCase() === savedSection.toLowerCase()) || 
-    (s.title && s.title.toLowerCase().includes(savedSection.toLowerCase()))
-  );
-
-  if (!targetSec || !targetSec.cells || !targetSec.slots) return;
-
-  let notificationsToSchedule = [];
-  let notificationId = 1;
-
-  const reminderOffsets = [60, 30, 10];
-
-  targetSec.slots.forEach((slot, rowIdx) => {
-    const match = slot.match(/(\d{1,2}):(\d{2})/);
-    if (!match) return;
-
-    let baseClassHour = parseInt(match[1], 10);
-    let baseClassMinute = parseInt(match[2], 10);
-
-    DAYS.forEach((dayName, colIdx) => {
-      const cellKey = `${rowIdx}-${colIdx}`;
-      const cell = targetSec.cells[cellKey];
-
-      if (cell && (cell.subject || cell.name)) {
-        const subName = cell.subject || cell.name;
-        const roomName = cell.room || "TBA";
-
-        reminderOffsets.forEach((offset) => {
-          let alertHour = baseClassHour;
-          let alertMinute = baseClassMinute - offset;
-
-          while (alertMinute < 0) {
-            alertMinute += 60;
-            alertHour -= 1;
-          }
-          if (alertHour < 0) {
-            alertHour += 24;
-          }
-
-          let scheduleDate = new Date();
-          scheduleDate.setHours(alertHour, alertMinute, 0, 0);
-
-          let timeLabel = offset === 60 ? "in 1 hour" : (offset === 30 ? "in 30 minutes" : "in 10 minutes");
-
-          notificationsToSchedule.push({
-            title: `Upcoming Class (${offset}m): ${subName}`,
-            body: `Room ${roomName} starts ${timeLabel} (${slot}).`,
-            id: notificationId++,
-            schedule: { at: scheduleDate, repeating: true, every: 'week' },
-            sound: null,
-            smallIcon: 'res://ic_stat_icon_config_sample',
-            allowWhileIdle: true // Bypasses Android Doze/Deep Sleep mode
-          });
-        });
+  try {
+    const { error } = await db.from("device_tokens").upsert([
+      { 
+        section_code: savedSection, 
+        token: fcmToken,
+        updated_at: new Date()
       }
-    });
-  });
+    ], { onConflict: 'token' });
 
-  if (notificationsToSchedule.length > 0) {
-    try {
-      const pending = await LocalNotifications.getPending();
-      if (pending.notifications.length > 0) {
-        await LocalNotifications.cancel(pending);
-      }
-
-      await LocalNotifications.schedule({ notifications: notificationsToSchedule });
-      console.log(`Successfully scheduled ${notificationsToSchedule.length} multi-interval reminders.`);
-    } catch (e) {
-      console.error("Error scheduling local notifications:", e);
+    if (error) {
+      console.error("Error saving FCM token to Supabase:", error.message);
+    } else {
+      console.log("FCM Token successfully synced to Supabase database.");
     }
+  } catch (err) {
+    console.error("Exception saving FCM token:", err);
   }
+}
+
+async function scheduleClassNotifications() {
+  console.log("FCM cloud notifications active.");
 }
 
 function fallbackWebNotification() {
