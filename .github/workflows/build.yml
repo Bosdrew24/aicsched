@@ -13,10 +13,15 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Install Dependencies
         run: npm install
+
+      - name: Prepare Web Folder
+        run: |
+          mkdir -p www
+          cp -r index.html script.js style.css manifest.json sw.js www/ 2>/dev/null || true
 
       - name: Add Android Platform
         run: npx cap add android || true
