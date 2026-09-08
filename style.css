@@ -680,7 +680,9 @@ select option {
 
 .schedule-table-container {
   overflow-x: auto;
-  background-color: var(--card-bg);
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  white-space: nowrap;
 }
 
 .schedule-table-container.hidden {
