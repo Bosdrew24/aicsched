@@ -52,7 +52,7 @@
               Admin Portal
             </button>
             <hr class="menu-divider">
-            <button class="menu-item" id="theme-toggle-btn" role="menuitem">☀️ Light Mode</button>
+            <button class="menu-item" id="theme-toggle-btn" role="menuitem" onclick="toggleTheme()">☀️ Light Mode</button>
           </div>
         </div>
       </div>
@@ -290,6 +290,19 @@
   </div>
   
   <script>
+    // Inline Toggle Theme function to handle switching modes dynamically
+    function toggleTheme() {
+      const body = document.body;
+      const themeBtn = document.getElementById('theme-toggle-btn');
+      body.classList.toggle('dark-mode');
+      
+      if (body.classList.contains('dark-mode')) {
+        themeBtn.innerHTML = '☀️ Light Mode';
+      } else {
+        themeBtn.innerHTML = '🌙 Dark Mode';
+      }
+    }
+
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js')
@@ -301,4 +314,5 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="script.js"></script>
 </body>
-</html>
+  </html>
+          
