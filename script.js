@@ -6,37 +6,14 @@ const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 // GLOBAL STATE & CONSTANTS
 const DAYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY ODL"];
 const DAYS_CLEAN = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
-const VAPID_PUBLIC_KEY = "BOJpCikmUaQrXF7VOE2JMZTVQQx4bef4yoNfcZ8TDJmrwFiSl4pZDwIX-KrIlCr1eZo6fosE108Ycwayx4m-ule";
-
 let selectedDayIndex = 0;
 let activeSession = "MORNING";
 let isViewingAllSections = false;
 let sectionsData = [];
+let allSections = [];
 let swRegistration = null;
 let notifiedClasses = new Set();
 window.adminSearchQuery = "";
-
-// INITIALIZATION
-document.addEventListener("DOMContentLoaded", () => {
-  initNativeNotifications();
-  loadSchedules();
-  checkStudentAuth();
-  checkTeacherAuth();
-  checkAdminAuth();
-  initSearchDropdown();
-  updateNotificationButtons();
-});
-
-// CAPACITOR NATIVE NOTIFICATION INITIALIZATION
-async function initNativeNotifications() {
-  if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications) {
-    try {
-      await Capacitor.Plugins.LocalNotifications.requestPermissions();
-    } catch (e) {
-      console.warn("Capacitor LocalNotifications request failed:", e);
-    }
-  }
-}
 
 // NAVIGATION & VIEWS
 window.setView = function (viewId) {
@@ -57,6 +34,7 @@ window.setView = function (viewId) {
   } else if (viewId === "admin-view") {
     checkAdminAuth();
   }
+  updateNotificationButtons();
 };
 
 // HAMBURGER MENU TOGGLE
@@ -68,55 +46,7 @@ window.toggleHamburger = function (event) {
   if (menu) menu.classList.toggle("active");
 };
 
-// NOTIFICATION BUTTON & CAPACITOR NATIVE HANDLER
-window.enablePhoneAlerts = async function () {
-  // 1. Native Capacitor App Handler
-  if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications) {
-    try {
-      const perm = await Capacitor.Plugins.LocalNotifications.requestPermissions();
-      if (perm.display === "granted") {
-        localStorage.setItem("aics_notifications_enabled", "true");
-        alert("Native phone alerts enabled successfully!");
-        updateNotificationButtons();
-        checkUpcomingClasses();
-      } else {
-        alert("Notification permission was denied in phone settings.");
-      }
-    } catch (err) {
-      alert("Error requesting native permissions: " + err.message);
-    }
-    return;
-  }
-
-  // 2. Standard Web Browser Handler Fallback
-  if ("Notification" in window) {
-    try {
-      const permission = await Notification.requestPermission();
-      if (permission === "granted") {
-        localStorage.setItem("aics_notifications_enabled", "true");
-        alert("Web notifications enabled successfully!");
-        updateNotificationButtons();
-        checkUpcomingClasses();
-      } else {
-        alert("Notification permission denied.");
-      }
-    } catch (err) {
-      alert("Error enabling notifications: " + err.message);
-    }
-  } else {
-    alert("Notifications are not supported on this device/browser.");
-  }
-};
-
-function updateNotificationButtons() {
-  const isEnabled = localStorage.getItem("aics_notifications_enabled") === "true";
-  document.querySelectorAll(".enable-alerts-btn").forEach((btn) => {
-    btn.textContent = isEnabled ? "Phone Alerts Active" : "Enable Phone Alerts";
-    btn.classList.toggle("active", isEnabled);
-  });
-}
-
-// STUDENT PORTAL AUTH LOGIC
+// STUDENT PORTAL AUTH & SEPARATION LOGIC
 function checkStudentAuth() {
   const savedSection = localStorage.getItem("aics_student_section");
   const gateCard = document.getElementById("student-gate-card");
@@ -290,17 +220,96 @@ window.loadSchedules = async function () {
     }
     if (Array.isArray(data)) {
       sectionsData = data;
+      allSections = data;
       renderSections();
       populateTeacherDropdown();
       renderTeacherSchedule();
+      renderAdminSections();
       checkUpcomingClasses();
-      if (document.getElementById("admin-main-content")?.style.display === "block") {
-        renderAdminSections();
-      }
     }
   } catch (err) {
     console.error("Error loading schedules:", err);
   }
+};
+
+// RENDER ADMIN SECTIONS LIST
+function renderAdminSections() {
+  const container = document.getElementById("admin-sections-list");
+  if (!container) return;
+
+  const listToRender = (allSections && allSections.length > 0) ? allSections : sectionsData;
+
+  if (!listToRender || listToRender.length === 0) {
+    container.innerHTML = '<p style="color:var(--text-muted); padding:12px;">No sections found in database.</p>';
+    return;
+  }
+
+  container.innerHTML = listToRender.map(sec => `
+    <div class="admin-section-card" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 16px; margin-bottom: 12px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <div>
+          <h4 style="margin:0; font-size:1.05rem; font-weight:800; color:#fff;">${sec.code || sec.section_code || 'Section'}</h4>
+          <span style="font-size:0.825rem; color:var(--text-muted);">${sec.title || ''} • <strong>${sec.session || 'MORNING'}</strong></span>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn-secondary" onclick="editSection('${sec.id || sec.code}')" style="padding:6px 12px; font-size:0.8rem;">Edit</button>
+          <button class="btn-danger" onclick="deleteSection('${sec.id || sec.code}')" style="background:var(--danger); color:#fff; border:none; padding:6px 12px; border-radius:6px; font-size:0.8rem; cursor:pointer;">Delete</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+window.addNewSection = async function () {
+  const code = document.getElementById("new-section-code")?.value.trim();
+  const title = document.getElementById("new-section-title")?.value.trim();
+  const session = document.getElementById("new-section-session")?.value || "MORNING";
+
+  if (!code || !title) {
+    alert("Please fill in both section code and title.");
+    return;
+  }
+
+  const newSec = {
+    code: code,
+    title: title,
+    session: session,
+    slots: ["7:00-8:00 AM", "8:00-9:00 AM", "9:00-10:00 AM", "10:00-11:00 AM", "11:00-12:00 PM"],
+    cells: {}
+  };
+
+  try {
+    const { data, error } = await db.from("schedules").insert([newSec]).select();
+    if (error) {
+      alert("Error adding section: " + error.message);
+      return;
+    }
+    alert("Section created successfully!");
+    if (document.getElementById("new-section-code")) document.getElementById("new-section-code").value = "";
+    if (document.getElementById("new-section-title")) document.getElementById("new-section-title").value = "";
+    await window.loadSchedules();
+  } catch (err) {
+    console.error("Error creating section:", err);
+  }
+};
+
+window.deleteSection = async function (identifier) {
+  if (!confirm(`Are you sure you want to delete section ${identifier}?`)) return;
+  try {
+    const { error } = await db.from("schedules").delete().or(`code.eq.${identifier},id.eq.${identifier}`);
+    if (error) {
+      alert("Error deleting section: " + error.message);
+      return;
+    }
+    alert("Section deleted!");
+    await window.loadSchedules();
+  } catch (err) {
+    console.error("Error deleting section:", err);
+  }
+};
+
+window.editSection = function (identifier) {
+  alert(`Editing mode opened for section ${identifier}.`);
 };
 
 // TEACHER SCHEDULE DROPDOWN & RENDERING
@@ -311,7 +320,6 @@ function populateTeacherDropdown() {
   ].filter(Boolean);
 
   if (selects.length === 0 || !sectionsData) return;
-
   const currentSelection = localStorage.getItem("aics_teacher_name") || "";
   const teachers = new Set();
 
@@ -345,9 +353,7 @@ window.renderTeacherSchedule = function () {
 
   const selectedTeacher = localStorage.getItem("aics_teacher_name") || "";
   if (!selectedTeacher) {
-    container.innerHTML = `<div style="color: var(--text-muted); text-align:center; padding:30px;">
-      Please select your name to view your assigned classes.
-    </div>`;
+    container.innerHTML = '<div style="color: var(--text-muted); text-align:center; padding:30px;">Please select your name to view your assigned classes.</div>';
     return;
   }
 
@@ -386,9 +392,7 @@ window.renderTeacherSchedule = function () {
   });
 
   if (!hasClasses) {
-    container.innerHTML = `<div style="color: var(--text-muted); text-align:center; padding:30px;">
-      No assigned classes found for <strong>${selectedTeacher}</strong>.
-    </div>`;
+    container.innerHTML = `<div style="color: var(--text-muted); text-align:center; padding:30px;">No assigned classes found for <strong>${selectedTeacher}</strong>.</div>`;
     return;
   }
 
@@ -413,8 +417,7 @@ window.renderTeacherSchedule = function () {
       if (items && items.length > 0) {
         html += '<td class="class-cell">';
         items.forEach((item) => {
-          html += `<div class="cell-code">${item.subject}</div>
-                   <div class="cell-name">Sec: ${item.section} (${item.room})</div>`;
+          html += `<div class="cell-code">${item.subject}</div><div class="cell-name">Sec: ${item.section} (${item.room})</div>`;
         });
         html += '</td>';
       } else {
@@ -478,6 +481,7 @@ function renderSections() {
       });
       html += '</tr>';
     });
+
     html += '</tbody></table>';
     tableDiv.innerHTML = html;
 
@@ -491,19 +495,12 @@ function renderSections() {
         if (sec.cells && sec.cells[key]) {
           const cell = sec.cells[key];
           const [r, c] = key.split("-");
-          const timeElem = document.getElementById("subject-card-time");
-          const codeElem = document.getElementById("subject-card-code");
-          const nameElem = document.getElementById("subject-card-name");
-          const roomElem = document.getElementById("subject-card-room");
-          const profElem = document.getElementById("subject-card-professor");
-          const overlay = document.getElementById("subject-details-overlay");
-
-          if (timeElem) timeElem.textContent = `${DAYS_CLEAN[c] || ''} ${sec.slots[r] || ''}`;
-          if (codeElem) codeElem.textContent = cell.subject || cell.name || "-";
-          if (nameElem) nameElem.textContent = cell.name || cell.subject || "-";
-          if (roomElem) roomElem.textContent = cell.room || "-";
-          if (profElem) profElem.textContent = cell.professor || "-";
-          if (overlay) overlay.classList.add("open");
+          document.getElementById("subject-card-time").textContent = `${DAYS_CLEAN[c] || 'Day'} · ${(sec.slots && sec.slots[r]) || ''}`;
+          document.getElementById("subject-card-code").textContent = cell.subject || cell.name || "-";
+          document.getElementById("subject-card-name").textContent = cell.name || cell.subject || "-";
+          document.getElementById("subject-card-room").textContent = cell.room || "-";
+          document.getElementById("subject-card-professor").textContent = cell.professor || "-";
+          document.getElementById("subject-details-overlay").classList.add("open");
         }
       });
     });
@@ -523,16 +520,38 @@ function updateMobileVis() {
   });
 }
 
-// SEARCH FILTERS & SESSION FILTER LOGIC
+// SESSION FILTER BUTTON LISTENERS
+function setupSessionFilters() {
+  const filterContainer = document.getElementById("session-filter-buttons");
+  if (!filterContainer) return;
+
+  filterContainer.addEventListener("click", (e) => {
+    const btn = e.target.closest(".session-filter-btn");
+    if (!btn) return;
+
+    document.querySelectorAll(".session-filter-btn").forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+
+    activeSession = btn.getAttribute("data-session") || "MORNING";
+    applyFilters();
+  });
+}
+
+// SEARCH & SESSION FILTERS LOGIC
 function applyFilters() {
   const savedSection = localStorage.getItem("aics_student_section");
   const input = document.getElementById("student-search-input") || document.querySelector(".chrome-search-input");
+  const val = input ? input.value.trim().toLowerCase() : "";
 
   document.querySelectorAll("#sections-container .section-card").forEach((card) => {
+    const cardSession = (card.dataset.session || "").trim().toLowerCase();
+    const currentActiveSession = (activeSession || "MORNING").trim().toLowerCase();
+    const sessionMatches = !card.dataset.session || cardSession === currentActiveSession;
+
     if (!isViewingAllSections && savedSection) {
       const targetSection = savedSection.trim().toLowerCase();
       const secCode = (card.dataset.sectionCode || "").trim().toLowerCase();
-      const secTitle = (card.dataset.sectionTitle || "").trim().toLowerCase();
+      const secTitle = (card.dataset.sectionTitle || "").trim().to
       const isMatch = secCode === targetSection || secTitle === targetSection || secCode.includes(targetSection) || secTitle.includes(targetSection);
 
       card.style.display = isMatch ? "block" : "none";
@@ -540,11 +559,6 @@ function applyFilters() {
       return;
     }
 
-    const cardSession = (card.dataset.session || "").trim().toLowerCase();
-    const currentActiveSession = (activeSession || "MORNING").trim().toLowerCase();
-    const sessionMatches = !card.dataset.session || cardSession === currentActiveSession;
-
-    const val = input ? input.value.trim().toLowerCase() : "";
     if (!val) {
       card.style.display = sessionMatches ? "block" : "none";
       card.querySelectorAll(".class-cell").forEach((c) => c.classList.remove("highlight", "dimmed"));
@@ -556,7 +570,6 @@ function applyFilters() {
       const sub = (cell.dataset.sub || "").toLowerCase();
       const prof = (cell.dataset.prof || "").toLowerCase();
       const room = (cell.dataset.room || "").toLowerCase();
-
       if (sub.includes(val) || prof.includes(val) || room.includes(val)) {
         cell.classList.add("highlight");
         cell.classList.remove("dimmed");
@@ -591,124 +604,170 @@ function initSearchDropdown() {
     buildSuggestions(e.target.value);
     applyFilters();
   });
+}
 
-  function buildSuggestions(query) {
-    if (!query || !query.trim()) {
-      dropdown.classList.remove("active");
-      dropdown.innerHTML = "";
-      return;
+function buildSuggestions(query) {
+  const dropdown = document.querySelector(".chrome-dropdown");
+  if (!dropdown) return;
+
+  if (!query || !query.trim()) {
+    dropdown.classList.remove("active");
+    return;
+  }
+
+  const cleanQuery = query.trim().toLowerCase();
+  const suggestions = [];
+  const addedKeys = new Set();
+
+  sectionsData.forEach((sec) => {
+    if (sec.code && sec.code.toLowerCase().includes(cleanQuery)) {
+      const key = `sec-${sec.code}`;
+      if (!addedKeys.has(key)) {
+        addedKeys.add(key);
+        suggestions.push({ text: sec.code, type: "Section" });
+      }
     }
-
-    const cleanQuery = query.trim().toLowerCase();
-    const suggestions = [];
-    const addedKeys = new Set();
-
-    sectionsData.forEach((sec) => {
-      if (sec.code && sec.code.toLowerCase().includes(cleanQuery)) {
-        const key = `sec-${sec.code}`;
-        if (!addedKeys.has(key)) {
-          addedKeys.add(key);
-          suggestions.push({ text: sec.code, type: "Section" });
+    if (sec.cells) {
+      Object.values(sec.cells).forEach((cell) => {
+        if (cell.professor && cell.professor.toLowerCase().includes(cleanQuery)) {
+          const profName = cell.professor.trim();
+          const key = `prof-${profName.toLowerCase()}`;
+          if (!addedKeys.has(key)) {
+            addedKeys.add(key);
+            suggestions.push({ text: profName, type: "Faculty" });
+          }
         }
-      }
-      if (sec.cells) {
-        Object.values(sec.cells).forEach((cell) => {
-          if (cell.professor && cell.professor.toLowerCase().includes(cleanQuery)) {
-            const profName = cell.professor.trim();
-            const key = `prof-${profName.toLowerCase()}`;
-            if (!addedKeys.has(key)) {
-              addedKeys.add(key);
-              suggestions.push({ text: profName, type: "Faculty" });
-            }
+        if (cell.subject && cell.subject.toLowerCase().includes(cleanQuery)) {
+          const subName = cell.subject.trim();
+          const key = `sub-${subName.toLowerCase()}`;
+          if (!addedKeys.has(key)) {
+            addedKeys.add(key);
+            suggestions.push({ text: subName, type: "Subject" });
           }
-          if (cell.subject && cell.subject.toLowerCase().includes(cleanQuery)) {
-            const subName = cell.subject.trim();
-            const key = `sub-${subName.toLowerCase()}`;
-            if (!addedKeys.has(key)) {
-              addedKeys.add(key);
-              suggestions.push({ text: subName, type: "Subject" });
-            }
-          }
-        });
-      }
-    });
-
-    if (suggestions.length === 0) {
-      dropdown.classList.remove("active");
-      dropdown.innerHTML = "";
-      return;
-    }
-
-    dropdown.innerHTML = suggestions
-      .slice(0, 6)
-      .map((s) => `<div class="dropdown-item" data-val="${s.text}"><span>${s.text}</span><small>${s.type}</small></div>`)
-      .join("");
-
-    dropdown.classList.add("active");
-
-    dropdown.querySelectorAll(".dropdown-item").forEach((item) => {
-      item.addEventListener("click", () => {
-        searchInput.value = item.getAttribute("data-val");
-        dropdown.classList.remove("active");
-        applyFilters();
+        }
       });
+    }
+  });
+
+  if (suggestions.length === 0) {
+    dropdown.classList.remove("active");
+    return;
+  }
+
+  dropdown.innerHTML = suggestions.slice(0, 6).map(s => `
+    <div class="chrome-dropdown-item" onclick="selectSuggestion('${s.text.replace(/'/g, "\\'")}')">
+      <span>${s.text}</span>
+      <small style="opacity:0.6;">${s.type}</small>
+    </div>
+  `).join('');
+
+  dropdown.classList.add("active");
+}
+
+window.selectSuggestion = function (text) {
+  const searchInput = document.getElementById("student-search-input") || document.querySelector(".chrome-search-input");
+  if (searchInput) {
+    searchInput.value = text;
+    applyFilters();
+  }
+  const dropdown = document.querySelector(".chrome-dropdown");
+  if (dropdown) dropdown.classList.remove("active");
+};
+
+// NOTIFICATION INTEGRATION (CAPACITOR + BROWSER)
+window.enablePhoneAlerts = async function () {
+  window.toggleNotifications();
+};
+
+window.toggleNotifications = async function () {
+  if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications) {
+    try {
+      const LocalNotifications = window.Capacitor.Plugins.LocalNotifications;
+      const perm = await LocalNotifications.requestPermissions();
+      if (perm.display === "granted") {
+        localStorage.setItem("aics_notifications_enabled", "true");
+        alert("Phone alerts enabled! You will receive native notifications for scheduled classes.");
+        updateNotificationButtons();
+        scheduleClassNotifications();
+      } else {
+        alert("Notification permission was denied in system settings.");
+      }
+    } catch (err) {
+      console.error("Capacitor LocalNotification error:", err);
+      fallbackWebNotification();
+    }
+  } else {
+    fallbackWebNotification();
+  }
+};
+
+function fallbackWebNotification() {
+  if (!("Notification" in window)) {
+    alert("Notifications are not supported on this browser.");
+    return;
+  }
+  if (Notification.permission === "granted") {
+    localStorage.setItem("aics_notifications_enabled", "true");
+    alert("Phone alerts enabled!");
+    updateNotificationButtons();
+    scheduleClassNotifications();
+  } else if (Notification.permission !== "denied") {
+    Notification.requestPermission().then((perm) => {
+      if (perm === "granted") {
+        localStorage.setItem("aics_notifications_enabled", "true");
+        alert("Phone alerts enabled!");
+        updateNotificationButtons();
+        scheduleClassNotifications();
+      }
     });
+  } else {
+    alert("Notifications are blocked in your device settings.");
   }
 }
 
-// UPCOMING CLASS SCHEDULE & NOTIFICATION CHECKER
-function checkUpcomingClasses() {
-  if (localStorage.getItem("aics_notifications_enabled") !== "true") return;
-
-  const savedSection = localStorage.getItem("aics_student_section");
-  if (!savedSection || !sectionsData) return;
-
-  const userSec = sectionsData.find(
-    (s) => (s.code || "").toLowerCase() === savedSection.toLowerCase() || (s.title || "").toLowerCase() === savedSection.toLowerCase()
-  );
-  if (!userSec || !userSec.cells || !userSec.slots) return;
-
-  let notifIdCounter = 100;
-  userSec.slots.forEach((slot, r) => {
-    DAYS.forEach((d, c) => {
-      const cell = userSec.cells[`${r}-${c}`];
-      if (cell && (cell.subject || cell.name)) {
-        notifIdCounter++;
-        scheduleClassAlert(
-          notifIdCounter,
-          cell.subject || cell.name,
-          cell.room || "TBA",
-          c,
-          slot
-        );
-      }
-    });
+function updateNotificationButtons() {
+  const isEnabled = localStorage.getItem("aics_notifications_enabled") === "true";
+  document.querySelectorAll("#student-notify-btn, #teacher-notify-btn, .enable-alerts-btn").forEach((btn) => {
+    if (isEnabled) {
+      btn.textContent = "🔔 Phone Alerts Active";
+      btn.classList.add("active");
+    } else {
+      btn.textContent = "🔕 Enable Phone Alerts";
+      btn.classList.remove("active");
+    }
   });
 }
 
-async function scheduleClassAlert(id, subject, room, dayIdx, timeSlot) {
+function scheduleClassNotifications() {
   if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications) {
     try {
-      await Capacitor.Plugins.LocalNotifications.schedule({
+      window.Capacitor.Plugins.LocalNotifications.schedule({
         notifications: [
           {
-            id: id,
-            title: `Upcoming Class: ${subject}`,
-            body: `Room ${room} starts soon (${timeSlot}).`,
-            schedule: { at: new Date(Date.now() + 5000) }
+            title: "AICSchedule Alerts Active",
+            body: "Class alerts will notify you 10 minutes before every scheduled lecture.",
+            id: 1001,
+            schedule: { at: new Date(Date.now() + 3000) }
           }
         ]
       });
     } catch (e) {
-      console.warn("Error scheduling Capacitor native notification:", e);
+      console.warn("Native schedule failed:", e);
     }
   }
 }
 
-function renderAdminSections() {
-  const container = document.getElementById("admin-sections-list");
-  if (container) {
-    container.innerHTML = `<div style="padding:15px;">Admin Control Active. ${sectionsData.length} sections loaded.</div>`;
+function checkUpcomingClasses() {
+  if (localStorage.getItem("aics_notifications_enabled") === "true") {
+    scheduleClassNotifications();
   }
 }
- 
+
+// INITIALIZATION
+document.addEventListener("DOMContentLoaded", () => {
+  window.loadSchedules();
+  setupSessionFilters();
+  initSearchDropdown();
+  updateNotificationButtons();
+});
+        
