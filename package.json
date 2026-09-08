@@ -1,0 +1,16 @@
+{
+  "name": "aics-schedule-app",
+  "version": "1.0.0",
+  "description": "AICS Schedule Mobile App",
+  "main": "index.html",
+  "scripts": {
+    "build": "echo 'Web assets ready'"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.0.0",
+    "@capacitor/cli": "^6.0.0",
+    "@capacitor/core": "^6.0.0",
+    "@capacitor/local-notifications": "^6.0.0"
+  }
+}
+
