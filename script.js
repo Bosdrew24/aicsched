@@ -16,29 +16,6 @@ let swRegistration = null;
 let notifiedClasses = new Set();
 window.adminSearchQuery = "";
 
-// HORIZONTAL SCROLL HELPERS
-window.scrollTableHorizontal = function (btn, distance) {
-  const card = btn.closest(".section-card");
-  const container = card ? card.querySelector(".schedule-table-container") : null;
-  if (container) {
-    container.scrollBy({ left: distance, behavior: "smooth" });
-  }
-};
-
-window.scrollToDayColumn = function (btn, dayIndex) {
-  const card = btn.closest(".section-card");
-  const table = card ? card.querySelector(".responsive-table") : null;
-  const container = card ? card.querySelector(".schedule-table-container") : null;
-  if (table && container) {
-    const thList = table.querySelectorAll("thead th");
-    const targetTh = thList[dayIndex + 1]; // +1 accounts for TIME column
-    if (targetTh) {
-      const targetLeft = targetTh.offsetLeft - 60;
-      container.scrollTo({ left: Math.max(0, targetLeft), behavior: "smooth" });
-    }
-  }
-};
-
 // NAVIGATION & VIEWS
 window.setView = function (viewId) {
   document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
@@ -358,20 +335,6 @@ window.renderTeacherSchedule = function () {
       <div class="section-header-bar">
         <span class="portal-tag">Faculty Schedule: ${selectedTeacher}</span>
       </div>
-      <div class="scroll-control-bar" style="display:flex; align-items:center; justify-content:space-between; gap:6px; padding:8px 12px; background:rgba(0,0,0,0.15); border-bottom:1px solid var(--border-color); flex-wrap:wrap;">
-        <div style="display:flex; gap:4px; align-items:center; overflow-x:auto;">
-          <span style="font-size:0.75rem; opacity:0.7; margin-right:4px;">Jump:</span>
-          <button type="button" onclick="scrollToDayColumn(this, 0)" style="padding:2px 8px; font-size:0.75rem; border-radius:4px; border:1px solid var(--border-color); background:var(--bg-card); color:var(--text-main); cursor:pointer;">Mon</button>
-          <button type="button" onclick="scrollToDayColumn(this, 1)" style="padding:2px 8px; font-size:0.75rem; border-radius:4px; border:1px solid var(--border-color); background:var(--bg-card); color:var(--text-main); cursor:pointer;">Tue</button>
-          <button type="button" onclick="scrollToDayColumn(this, 2)" style="padding:2px 8px; font-size:0.75rem; border-radius:4px; border:1px solid var(--border-color); background:var(--bg-card); color:var(--text-main); cursor:pointer;">Wed</button>
-          <button type="button" onclick="scrollToDayColumn(this, 3)" style="padding:2px 8px; font-size:0.75rem; border-radius:4px; border:1px solid var(--border-color); background:var(--bg-card); color:var(--text-main); cursor:pointer;">Thu</button>
-          <button type="button" onclick="scrollToDayColumn(this, 4)" style="padding:2px 8px; font-size:0.75rem; border-radius:4px; border:1px solid var(--border-color); background:var(--bg-card); color:var(--text-main); cursor:pointer;">Fri</button>
-        </div>
-        <div style="display:flex; gap:6px;">
-          <button type="button" onclick="scrollTableHorizontal(this, -220)" style="padding:4px 10px; font-size:0.85rem; border-radius:4px; border:1px solid var(--border-color); background:var(--primary); color:#fff; cursor:pointer;">◀</button>
-          <button type="button" onclick="scrollTableHorizontal(this, 220)" style="padding:4px 10px; font-size:0.85rem; border-radius:4px; border:1px solid var(--border-color); background:var(--primary); color:#fff; cursor:pointer;">▶</button>
-        </div>
-      </div>
       <div class="schedule-table-container">
         <table class="responsive-table">
           <thead>
@@ -429,25 +392,6 @@ function renderSections() {
     toggleBtn.innerHTML = `<span>${sec.title || sec.code}</span>`;
     header.appendChild(toggleBtn);
 
-    // SCROLL CONTROL BAR
-    const scrollNav = document.createElement("div");
-    scrollNav.className = "scroll-control-bar";
-    scrollNav.style.cssText = "display:flex; align-items:center; justify-content:space-between; gap:6px; padding:8px 12px; background:rgba(0,0,0,0.15); border-bottom:1px solid var(--border-color); flex-wrap:wrap;";
-    scrollNav.innerHTML = `
-      <div style="display:flex; gap:4px; align-items:center; overflow-x:auto;">
-        <span style="font-size:0.75rem; opacity:0.7; margin-right:4px;">Jump:</span>
-        <button type="button" onclick="scrollToDayColumn(this, 0)" style="padding:2px 8px; font-size:0.75rem; border-radius:4px; border:1px solid var(--border-color); background:var(--bg-card); color:var(--text-main); cursor:pointer;">Mon</button>
-        <button type="button" onclick="scrollToDayColumn(this, 1)" style="padding:2px 8px; font-size:0.75rem; border-radius:4px; border:1px solid var(--border-color); background:var(--bg-card); color:var(--text-main); cursor:pointer;">Tue</button>
-        <button type="button" onclick="scrollToDayColumn(this, 2)" style="padding:2px 8px; font-size:0.75rem; border-radius:4px; border:1px solid var(--border-color); background:var(--bg-card); color:var(--text-main); cursor:pointer;">Wed</button>
-        <button type="button" onclick="scrollToDayColumn(this, 3)" style="padding:2px 8px; font-size:0.75rem; border-radius:4px; border:1px solid var(--border-color); background:var(--bg-card); color:var(--text-main); cursor:pointer;">Thu</button>
-        <button type="button" onclick="scrollToDayColumn(this, 4)" style="padding:2px 8px; font-size:0.75rem; border-radius:4px; border:1px solid var(--border-color); background:var(--bg-card); color:var(--text-main); cursor:pointer;">Fri</button>
-      </div>
-      <div style="display:flex; gap:6px;">
-        <button type="button" onclick="scrollTableHorizontal(this, -220)" style="padding:4px 10px; font-size:0.85rem; border-radius:4px; border:1px solid var(--border-color); background:var(--primary); color:#fff; cursor:pointer;">◀</button>
-        <button type="button" onclick="scrollTableHorizontal(this, 220)" style="padding:4px 10px; font-size:0.85rem; border-radius:4px; border:1px solid var(--border-color); background:var(--primary); color:#fff; cursor:pointer;">▶</button>
-      </div>
-    `;
-
     const tableDiv = document.createElement("div");
     tableDiv.className = "schedule-table-container";
 
@@ -478,7 +422,6 @@ function renderSections() {
 
     toggleBtn.addEventListener("click", () => {
       tableDiv.classList.toggle("hidden");
-      scrollNav.classList.toggle("hidden");
     });
 
     tableDiv.querySelectorAll(".class-cell").forEach((td) => {
@@ -498,7 +441,6 @@ function renderSections() {
     });
 
     card.appendChild(header);
-    card.appendChild(scrollNav);
     card.appendChild(tableDiv);
     studentContainer.appendChild(card);
   });
