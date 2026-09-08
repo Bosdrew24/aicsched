@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "890168403577",
+    "project_id": "aicsched",
+    "storage_bucket": "aicsched.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:890168403577:android:4f0d86a83c676e591996a8",
+        "android_client_info": {
+          "package_name": "com.aics.schedule"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDga8RgWPnr0Y-_JXzqyIEu4dGdoCBgotU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
