@@ -25,7 +25,7 @@
       <div class="nav-actions">
         <!-- Hamburger Container containing menu options -->
         <div class="hamburger-container" id="hamburger-container">
-          <button class="hamburger-btn" id="hamburger-btn" aria-label="Toggle Navigation Menu" aria-expanded="false">
+          <button class="hamburger-btn" id="hamburger-btn" aria-label="Toggle Navigation Menu" aria-expanded="false" onclick="toggleHamburger(event)">
             <span class="bar"></span>
             <span class="bar"></span>
             <span class="bar"></span>
@@ -106,7 +106,7 @@
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:12px;">
           <span id="active-student-section-badge" style="background:var(--primary); color:#fff; padding:6px 14px; border-radius:var(--radius-pill); font-weight:700; font-size:0.85rem;">Section: --</span>
           <div style="display:flex; gap:10px; align-items:center;">
-            <button class="notify-btn" id="student-notify-btn" onclick="toggleNotifications()">🔕 Enable Phone Alerts</button>
+            <button class="enable-alerts-btn notify-btn" id="student-notify-btn" onclick="enablePhoneAlerts()">Enable Phone Alerts</button>
             <button class="btn-secondary" onclick="logoutStudent()">Switch Section</button>
           </div>
         </div>
@@ -165,7 +165,7 @@
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:12px;">
           <span id="active-teacher-badge" style="background:var(--success); color:#fff; padding:6px 14px; border-radius:var(--radius-pill); font-weight:700; font-size:0.85rem;">Faculty: --</span>
           <div style="display:flex; gap:10px; align-items:center;">
-            <button class="notify-btn" id="teacher-notify-btn" onclick="toggleNotifications()">🔕 Enable Phone Alerts</button>
+            <button class="enable-alerts-btn notify-btn" id="teacher-notify-btn" onclick="enablePhoneAlerts()">Enable Phone Alerts</button>
             <button class="btn-secondary" onclick="logoutTeacher()">Switch Profile</button>
           </div>
         </div>
@@ -266,7 +266,7 @@
         </div>
       </div>
       <div class="details-card-actions">
-        <button class="details-close-btn" id="subject-card-close-btn">Close</button>
+        <button class="details-close-btn" id="subject-card-close-btn" onclick="document.getElementById('subject-details-overlay').classList.remove('open')">Close</button>
       </div>
     </div>
   </div>
