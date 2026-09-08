@@ -28,14 +28,13 @@ jobs:
           mkdir -p www
           cp -r index.html script.js style.css manifest.json sw.js www/ 2>/dev/null || true
 
-      - name: Add Android Platform
-        run: npx cap add android || true
+      - name: Add Android Platform and Sync
+        run: |
+          npx cap add android || true
+          npx cap sync android
 
-      - name: Copy google-services.json
-        run: mkdir -p android/app && cp google-services.json android/app/
-
-      - name: Sync Capacitor
-        run: npx cap sync android
+      - name: Inject google-services.json
+        run: cp google-services.json android/app/
 
       - name: Build APK with Gradle
         run: |
