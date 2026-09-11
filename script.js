@@ -216,6 +216,13 @@ window.submitStudentLogin = function () {
 
   if (localStorage.getItem("aics_notifications_enabled") === "true") {
     scheduleClassNotifications();
+
+    // Re-sync the existing device token to this (possibly new) section,
+    // so switching sections updates which section's alerts this device receives.
+    const existingToken = localStorage.getItem("aics_fcm_token");
+    if (existingToken) {
+      saveDeviceTokenToSupabase(existingToken);
+    }
   }
 };
 
