@@ -210,9 +210,6 @@ window.submitStudentLogin = function () {
   localStorage.setItem("aics_student_section", sectionCode);
   isViewingAllSections = false;
   checkStudentAuth();
-  
-  // Create initial comparison snapshot on login
-  checkForScheduleUpdates(sectionCode, true);
 
   if (localStorage.getItem("aics_notifications_enabled") === "true") {
     scheduleClassNotifications();
@@ -337,12 +334,6 @@ window.loadSchedules = async function () {
       sectionsData = data;
       allSections = data;
 
-      // Check if student section changed/updated on fetch
-      const savedSection = localStorage.getItem("aics_student_section");
-      if (savedSection) {
-        checkForScheduleUpdates(savedSection, false);
-      }
-
       renderSections();
       populateTeacherDropdown();
       renderTeacherSchedule();
@@ -352,54 +343,6 @@ window.loadSchedules = async function () {
     console.error("Error loading schedules:", err);
   }
 };
-
-// Automated section adjustment alert checker
-async function checkForScheduleUpdates(sectionCode, isInitialSetup = false) {
-  if (!sectionCode) return;
-
-  const targetSec = sectionsData.find(s => 
-    (s.code && s.code.toLowerCase() === sectionCode.toLowerCase()) || 
-    (s.title && s.title.toLowerCase().includes(sectionCode.toLowerCase()))
-  );
-
-  if (!targetSec) return;
-
-  const snapshotKey = `aics_snapshot_${targetSec.code || sectionCode}`;
-  const currentSnapshot = JSON.stringify(targetSec.cells || {});
-  const savedSnapshot = localStorage.getItem(snapshotKey);
-
-  if (!isInitialSetup && savedSnapshot && savedSnapshot !== currentSnapshot) {
-    // Modification detected! Fire notification
-    triggerSectionUpdateAlert(targetSec.code);
-  }
-
-  // Update stored snapshot
-  localStorage.setItem(snapshotKey, currentSnapshot);
-}
-
-async function triggerSectionUpdateAlert(sectionCode) {
-  const title = `⚠️ Schedule Modified: ${sectionCode}`;
-  const body = `Your room or teacher assignment has been updated by administration.`;
-
-  if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications) {
-    try {
-      await window.Capacitor.Plugins.LocalNotifications.schedule({
-        notifications: [{
-          title: title,
-          body: body,
-          id: 999888,
-          schedule: { at: new Date(new Date().getTime() + 1000) },
-          smallIcon: 'res://ic_stat_icon_config_sample',
-          allowWhileIdle: true
-        }]
-      });
-    } catch (e) {
-      console.error("Error firing section update notification:", e);
-    }
-  } else if ("Notification" in window && Notification.permission === "granted") {
-    new Notification(title, { body: body });
-  }
-}
 
 function renderAdminSections() {
   const container = document.getElementById("admin-sections-list");
