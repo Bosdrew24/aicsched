@@ -12,7 +12,7 @@ let sectionsData = [];
 let allSections = [];
 
 // ==========================================
-// 1. THEME SWITCHER LOGIC (DARK / LIGHT MODE)
+// 1. THEME SWITCHER
 // ==========================================
 function initTheme() {
   const savedTheme = localStorage.getItem("aics_theme") || "dark";
@@ -21,100 +21,130 @@ function initTheme() {
 
 function applyTheme(theme) {
   const isLight = theme === "light";
-
   document.documentElement.setAttribute("data-theme", theme);
   document.body.setAttribute("data-theme", theme);
-
   document.documentElement.classList.toggle("light-mode", isLight);
   document.body.classList.toggle("light-mode", isLight);
   document.documentElement.classList.toggle("dark-mode", !isLight);
   document.body.classList.toggle("dark-mode", !isLight);
-
   localStorage.setItem("aics_theme", theme);
   updateThemeUI(isLight);
 }
 
 window.toggleTheme = function () {
   const currentTheme = localStorage.getItem("aics_theme") === "light" ? "light" : "dark";
-  const newTheme = currentTheme === "light" ? "dark" : "light";
-  applyTheme(newTheme);
+  applyTheme(currentTheme === "light" ? "dark" : "light");
 };
 
 function updateThemeUI(isLight) {
-  const buttons = document.querySelectorAll(".theme-toggle-btn, #theme-toggle-btn, [data-theme-toggle]");
-  buttons.forEach((btn) => {
+  document.querySelectorAll(".theme-toggle-btn, #theme-toggle-btn, [data-theme-toggle]").forEach((btn) => {
     btn.textContent = isLight ? "🌙 Dark Mode" : "☀️ Light Mode";
   });
 }
 
 // ==========================================
-// 2. AUTOMATIC TIME SLOT CALCULATOR PER SESSION (24-HOUR FORMAT)
+// 2. TIME HELPERS (deterministic 24-hour-first parsing)
 // ==========================================
+
+// Parses a single time piece into 24-hour minutes-since-midnight.
+// If it carries explicit AM/PM, that's used directly.
+// If it doesn't, the raw hour is treated as a literal 24-hour value —
+// this matches how slots are actually stored ("13:00 - 14:00", "07:00 - 08:00").
+// No more inferring AM/PM from the sibling time, which was the source of
+// the "11:00 AM - 12:00 AM" bug.
+function pieceToMinutes24(raw) {
+  const m = raw.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+  if (!m) return null;
+  const hour = parseInt(m[1], 10);
+  const min = parseInt(m[2], 10);
+  const period = m[3] ? m[3].toUpperCase() : null;
+  if (period) {
+    let h = hour % 12;
+    if (period === "PM") h += 12;
+    return h * 60 + min;
+  }
+  return hour * 60 + min;
+}
+
+function minutesToDisplay12(totalMinutes) {
+  const h24 = Math.floor(totalMinutes / 60) % 24;
+  const min = totalMinutes % 60;
+  const period = h24 >= 12 ? "PM" : "AM";
+  const h12 = h24 % 12 || 12;
+  return `${h12}:${String(min).padStart(2, '0')} ${period}`;
+}
+
+function getSlotRangeMinutes(slotStr) {
+  if (!slotStr) return null;
+  const parts = slotStr.split("-").map((s) => s.trim());
+  if (parts.length !== 2) return null;
+  const startMin = pieceToMinutes24(parts[0]);
+  let endMin = pieceToMinutes24(parts[1]);
+  if (startMin === null || endMin === null) return null;
+  if (endMin <= startMin) endMin += 24 * 60; // defensive: midnight-crossing edge case
+  return { startMin, endMin };
+}
+
+function getSlotStartMinutes(slotStr) {
+  const range = getSlotRangeMinutes(slotStr);
+  return range ? range.startMin % (24 * 60) : null;
+}
+
+function formatTimeRangeDisplay(slotStr) {
+  const range = getSlotRangeMinutes(slotStr);
+  if (!range) return slotStr;
+  return `${minutesToDisplay12(range.startMin % (24 * 60))} - ${minutesToDisplay12(range.endMin % (24 * 60))}`;
+}
+
+// Default slots are now generated directly in clean 12-hour display format,
+// matching the rest of the app (admin editor requirement).
 function getDefaultSlotsForSession(session = "MORNING") {
   const sess = (session || "MORNING").toUpperCase();
+  let raw24;
   if (sess === "AFTERNOON") {
-    return [
-      "09:00 - 10:00", "10:00 - 11:00", "11:00 - 12:00",
-      "12:00 - 13:00", "13:00 - 14:00", "14:00 - 15:00",
-      "15:00 - 16:00", "16:00 - 17:00", "17:00 - 18:00",
-      "18:00 - 19:00", "19:00 - 20:00"
-    ];
+    raw24 = ["09:00 - 10:00", "10:00 - 11:00", "11:00 - 12:00", "12:00 - 13:00", "13:00 - 14:00",
+             "14:00 - 15:00", "15:00 - 16:00", "16:00 - 17:00", "17:00 - 18:00", "18:00 - 19:00", "19:00 - 20:00"];
   } else if (sess === "EVENING") {
-    return [
-      "15:00 - 16:00", "16:00 - 17:00", "17:00 - 18:00",
-      "18:00 - 19:00", "19:00 - 20:00", "20:00 - 21:00"
-    ];
+    raw24 = ["15:00 - 16:00", "16:00 - 17:00", "17:00 - 18:00", "18:00 - 19:00", "19:00 - 20:00", "20:00 - 21:00"];
   } else {
-    return [
-      "07:00 - 08:00", "08:00 - 09:00", "09:00 - 10:00",
-      "10:00 - 11:00", "11:00 - 12:00", "12:00 - 13:00",
-      "13:00 - 14:00"
-    ];
+    raw24 = ["07:00 - 08:00", "08:00 - 09:00", "09:00 - 10:00", "10:00 - 11:00", "11:00 - 12:00", "12:00 - 13:00", "13:00 - 14:00"];
   }
+  return raw24.map(formatTimeRangeDisplay);
 }
 
 function getNextTimeSlot(lastSlot, session = "MORNING") {
-  if (!lastSlot || !lastSlot.trim()) {
-    const defaults = getDefaultSlotsForSession(session);
-    return defaults[0];
-  }
+  if (!lastSlot || !lastSlot.trim()) return getDefaultSlotsForSession(session)[0];
+  const range = getSlotRangeMinutes(lastSlot);
+  if (!range) return getDefaultSlotsForSession(session)[0];
 
-  const matches = lastSlot.match(/(\d{1,2}):(\d{2})/g);
-  if (!matches || matches.length < 2) {
-    const defaults = getDefaultSlotsForSession(session);
-    return defaults[0];
-  }
-
-  function parseTimeToMinutes(timeStr) {
-    const m = timeStr.match(/(\d{1,2}):(\d{2})/);
-    if (!m) return 0;
-    let h = parseInt(m[1], 10);
-    let min = parseInt(m[2], 10);
-    return h * 60 + min;
-  }
-
-  function formatMinutesToTime(totalMins) {
-    let total = (totalMins + 1440) % 1440;
-    let h = Math.floor(total / 60);
-    let min = total % 60;
-
-    const hStr = String(h).padStart(2, '0');
-    const minStr = String(min).padStart(2, '0');
-    return `${hStr}:${minStr}`;
-  }
-
-  const startMins = parseTimeToMinutes(matches[0]);
-  const endMins = parseTimeToMinutes(matches[1]);
-  let duration = endMins - startMins;
+  let duration = range.endMin - range.startMin;
   if (duration <= 0) duration = 60;
 
-  const nextStartMins = endMins;
-  const nextEndMins = nextStartMins + duration;
+  const nextStart = range.endMin;
+  const nextEnd = nextStart + duration;
+  return `${minutesToDisplay12(nextStart % 1440)} - ${minutesToDisplay12(nextEnd % 1440)}`;
+}
 
-  const newStart = formatMinutesToTime(nextStartMins);
-  const newEnd = formatMinutesToTime(nextEndMins);
+// cellDayIndex convention matches your DAYS array: 0=Monday ... 4=Friday ODL
+function getManilaCellDayIndex() {
+  const fmt = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Manila", weekday: "short" });
+  const map = { Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 4 };
+  const wd = fmt.format(new Date());
+  return map[wd] !== undefined ? map[wd] : null;
+}
 
-  return `${newStart} - ${newEnd}`;
+function getManilaMinutesNow() {
+  const fmt = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Manila", hour: "2-digit", minute: "2-digit", hour12: false });
+  const parts = fmt.formatToParts(new Date());
+  const get = (t) => parts.find((p) => p.type === t)?.value;
+  return parseInt(get("hour"), 10) * 60 + parseInt(get("minute"), 10);
+}
+
+function displayRoom(room, cellDayIndex) {
+  const isFriday = cellDayIndex === 4;
+  const isEmpty = !room || !room.trim() || room.trim().toUpperCase() === "TBA";
+  if (isFriday && isEmpty) return "Online";
+  return room && room.trim() ? room : "TBA";
 }
 
 // ==========================================
@@ -131,23 +161,26 @@ window.setView = function (viewId) {
   const menu = document.getElementById("hamburger-menu");
   if (menu) menu.classList.remove("active");
 
-  if (viewId === "teacher-view") {
-    checkTeacherAuth();
-  } else if (viewId === "student-view") {
-    checkStudentAuth();
-  } else if (viewId === "admin-view") {
-    checkAdminAuth();
-  }
+  if (viewId === "teacher-view") checkTeacherAuth();
+  else if (viewId === "student-view") checkStudentAuth();
+  else if (viewId === "admin-view") checkAdminAuth();
+
   updateNotificationButtons();
+  updateBottomNavActive(viewId);
 };
 
 window.toggleHamburger = function (event) {
-  if (event && typeof event.stopPropagation === "function") {
-    event.stopPropagation();
-  }
+  if (event && typeof event.stopPropagation === "function") event.stopPropagation();
   const menu = document.getElementById("hamburger-menu");
   if (menu) menu.classList.toggle("active");
 };
+
+function updateBottomNavActive(viewId) {
+  const map = { "home-view": "bn-home", "student-view": "bn-student", "teacher-view": "bn-teacher", "admin-view": "bn-admin" };
+  document.querySelectorAll(".bottom-nav-item").forEach((btn) => btn.classList.remove("active"));
+  const activeBtn = document.getElementById(map[viewId]);
+  if (activeBtn) activeBtn.classList.add("active");
+}
 
 // ==========================================
 // 4. STUDENT PORTAL AUTH LOGIC
@@ -159,9 +192,7 @@ function checkStudentAuth() {
   const sessionFilterBar = document.getElementById("session-filter-buttons");
   const badge = document.getElementById("active-student-section-badge");
   const searchInput = document.getElementById("student-search-input");
-  const searchContainer = searchInput
-    ? searchInput.closest(".chrome-search-container") || searchInput.closest(".search-box") || searchInput.parentElement
-    : null;
+  const searchContainer = searchInput ? searchInput.closest(".chrome-search-container") : null;
 
   if (isViewingAllSections || savedSection) {
     if (gateCard) gateCard.style.display = "none";
@@ -179,6 +210,7 @@ function checkStudentAuth() {
       if (searchInput) searchInput.value = savedSection;
     }
     applyFilters();
+    renderNextClassCard();
   } else {
     if (gateCard) gateCard.style.display = "block";
     if (mainContent) mainContent.style.display = "none";
@@ -212,14 +244,8 @@ window.submitStudentLogin = function () {
   checkStudentAuth();
 
   if (localStorage.getItem("aics_notifications_enabled") === "true") {
-    scheduleClassNotifications();
-
-    // Re-sync the existing device token to this (possibly new) section,
-    // so switching sections updates which section's alerts this device receives.
     const existingToken = localStorage.getItem("aics_fcm_token");
-    if (existingToken) {
-      saveDeviceTokenToSupabase(existingToken);
-    }
+    if (existingToken) saveDeviceTokenToSupabase(existingToken);
   }
 };
 
@@ -248,6 +274,7 @@ function checkTeacherAuth() {
     mainContent.style.display = "block";
     if (badge) badge.textContent = `Faculty: ${savedTeacher}`;
     renderTeacherSchedule();
+    renderTeacherNextClassCard();
   } else if (gateCard && mainContent) {
     gateCard.style.display = "block";
     mainContent.style.display = "none";
@@ -255,9 +282,7 @@ function checkTeacherAuth() {
   updateNotificationButtons();
 }
 
-window.openTeacherLogin = function () {
-  window.setView("teacher-view");
-};
+window.openTeacherLogin = function () { window.setView("teacher-view"); };
 
 window.submitTeacherLogin = function () {
   const select = document.getElementById("teacher-name-select-gate") || document.getElementById("teacher-name-select");
@@ -267,6 +292,13 @@ window.submitTeacherLogin = function () {
   }
   localStorage.setItem("aics_teacher_name", select.value);
   checkTeacherAuth();
+
+  // Re-sync token to the correct teacher identity if switching profiles
+  // while notifications are already enabled.
+  if (localStorage.getItem("aics_notifications_enabled") === "true") {
+    const existingToken = localStorage.getItem("aics_fcm_token");
+    if (existingToken) saveDeviceTokenToSupabase(existingToken);
+  }
 };
 
 window.logoutTeacher = function () {
@@ -279,16 +311,7 @@ window.logoutTeacher = function () {
 // ==========================================
 // 6. ADMIN PORTAL & AUTH LOGIC
 // ==========================================
-window.openAdminModal = function () {
-  window.setView("admin-view");
-};
-
-window.closeAdminModal = function () {
-  const modal = document.getElementById("admin-login-modal");
-  if (modal) modal.style.display = "none";
-  const passInput = document.getElementById("admin-pass-input");
-  if (passInput) passInput.value = "";
-};
+window.openAdminModal = function () { window.setView("admin-view"); };
 
 function checkAdminAuth() {
   const isAdmin = localStorage.getItem("aics_admin_logged_in") === "true";
@@ -298,6 +321,7 @@ function checkAdminAuth() {
     gateCard.style.display = "none";
     mainContent.style.display = "block";
     renderAdminSections();
+    fetchAndRenderReports();
   } else if (gateCard && mainContent) {
     gateCard.style.display = "block";
     mainContent.style.display = "none";
@@ -321,23 +345,21 @@ window.logoutAdmin = function () {
 };
 
 // ==========================================
-// 7. SUPABASE DATA MANAGEMENT & API CALLS
+// 7. SUPABASE DATA MANAGEMENT
 // ==========================================
 window.loadSchedules = async function () {
   try {
     const { data, error } = await db.from("schedules").select("*");
-    if (error) {
-      console.error("Error fetching schedules from Supabase:", error);
-      return;
-    }
+    if (error) { console.error("Error fetching schedules:", error); return; }
     if (Array.isArray(data)) {
       sectionsData = data;
       allSections = data;
-
       renderSections();
       populateTeacherDropdown();
       renderTeacherSchedule();
       renderAdminSections();
+      renderNextClassCard();
+      renderTeacherNextClassCard();
     }
   } catch (err) {
     console.error("Error loading schedules:", err);
@@ -347,7 +369,6 @@ window.loadSchedules = async function () {
 function renderAdminSections() {
   const container = document.getElementById("admin-sections-list");
   if (!container) return;
-
   const listToRender = (allSections && allSections.length > 0) ? allSections : sectionsData;
 
   if (!listToRender || listToRender.length === 0) {
@@ -381,26 +402,19 @@ window.addNewSection = async function () {
     return;
   }
 
-  const defaultSlots = getDefaultSlotsForSession(session);
-
   const newSec = {
     id: crypto.randomUUID(),
-    code: code,
-    title: title,
-    session: session,
-    slots: defaultSlots,
+    code, title, session,
+    slots: getDefaultSlotsForSession(session),
     cells: {}
   };
 
   try {
     const { error } = await db.from("schedules").insert([newSec]);
-    if (error) {
-      alert("Error adding section: " + error.message);
-      return;
-    }
+    if (error) { alert("Error adding section: " + error.message); return; }
     alert("Section created successfully!");
-    if (document.getElementById("new-section-code")) document.getElementById("new-section-code").value = "";
-    if (document.getElementById("new-section-title")) document.getElementById("new-section-title").value = "";
+    document.getElementById("new-section-code").value = "";
+    document.getElementById("new-section-title").value = "";
     await window.loadSchedules();
   } catch (err) {
     console.error("Error creating section:", err);
@@ -411,10 +425,7 @@ window.deleteSection = async function (identifier) {
   if (!confirm(`Are you sure you want to delete section ${identifier}?`)) return;
   try {
     const { error } = await db.from("schedules").delete().or(`code.eq.${identifier},id.eq.${identifier}`);
-    if (error) {
-      alert("Error deleting section: " + error.message);
-      return;
-    }
+    if (error) { alert("Error deleting section: " + error.message); return; }
     alert("Section deleted!");
     await window.loadSchedules();
   } catch (err) {
@@ -423,7 +434,7 @@ window.deleteSection = async function (identifier) {
 };
 
 // ==========================================
-// 8. DYNAMIC TABLE ROW ADD/DELETE (MODAL)
+// 8. DYNAMIC TABLE ROW ADD/DELETE (ADMIN EDIT MODAL)
 // ==========================================
 window.addEditorRow = function () {
   const tbody = document.getElementById("admin-edit-table-body");
@@ -435,43 +446,33 @@ window.addEditorRow = function () {
   const rows = tbody.querySelectorAll("tr");
   let lastSlotVal = "";
   if (rows.length > 0) {
-    const lastRow = rows[rows.length - 1];
-    const lastInput = lastRow.querySelector(".edit-slot-input");
-    if (lastInput && lastInput.value.trim()) {
-      lastSlotVal = lastInput.value.trim();
-    }
+    const lastInput = rows[rows.length - 1].querySelector(".edit-slot-input");
+    if (lastInput && lastInput.value.trim()) lastSlotVal = lastInput.value.trim();
   }
-
   const nextSlot = getNextTimeSlot(lastSlotVal, currentSession);
 
   const tr = document.createElement("tr");
   let cellsHtml = `
-    <td style="background:var(--card-bg); padding:4px; border:1px solid var(--border-color);">
+    <td style="background:var(--card-bg); padding:4px; border:1px solid var(--border-color); width:130px; min-width:130px;">
       <input type="text" class="edit-slot-input" value="${nextSlot}" 
         style="width:100%; border:none; background:transparent; font-weight:800; color:var(--text-main); font-size:0.8rem; text-align:center; outline:none; box-sizing:border-box;">
-    </td>
-  `;
+    </td>`;
 
   DAYS.forEach((day, c) => {
     const isFriday = (c === 4);
     const bgStyle = isFriday ? 'background:var(--table-odl-bg);' : 'background:var(--card-bg);';
     cellsHtml += `
-      <td class="edit-day-cell" style="${bgStyle} border:1px solid var(--border-color); padding:4px; vertical-align:top;">
-        <input type="text" class="edit-sub-input" placeholder="Sub Code" value=""
-          style="width:100%; border:none; background:transparent; font-weight:bold; color:var(--text-main); font-size:0.75rem; text-align:center; padding:1px 0; outline:none; box-sizing:border-box;">
-        <input type="text" class="edit-prof-input" placeholder="Teacher" value=""
-          style="width:100%; border:none; background:transparent; color:var(--text-muted); font-size:0.7rem; text-align:center; padding:1px 0; outline:none; box-sizing:border-box;">
-        <input type="text" class="edit-room-input" placeholder="Room" value=""
-          style="width:100%; border:none; background:transparent; color:var(--primary); font-size:0.68rem; font-weight:600; text-align:center; padding:1px 0; outline:none; box-sizing:border-box;">
-      </td>
-    `;
+      <td class="edit-day-cell" style="${bgStyle} border:1px solid var(--border-color); padding:4px; vertical-align:top; min-width:140px;">
+        <input type="text" class="edit-sub-input" placeholder="Sub Code" value="" style="width:100%; border:none; background:transparent; font-weight:bold; color:var(--text-main); font-size:0.75rem; text-align:center; padding:1px 0; outline:none; box-sizing:border-box;">
+        <input type="text" class="edit-prof-input" placeholder="Teacher" value="" style="width:100%; border:none; background:transparent; color:var(--text-muted); font-size:0.7rem; text-align:center; padding:1px 0; outline:none; box-sizing:border-box;">
+        <input type="text" class="edit-room-input" placeholder="Room" value="" style="width:100%; border:none; background:transparent; color:var(--primary); font-size:0.68rem; font-weight:600; text-align:center; padding:1px 0; outline:none; box-sizing:border-box;">
+      </td>`;
   });
 
   cellsHtml += `
-    <td style="background:var(--card-bg); border:1px solid var(--border-color); text-align:center; vertical-align:middle; padding:2px;">
+    <td style="background:var(--card-bg); border:1px solid var(--border-color); text-align:center; vertical-align:middle; padding:2px; min-width:44px;">
       <button type="button" onclick="deleteEditorRow(this)" style="background:var(--danger); color:#fff; border:none; width:24px; height:24px; border-radius:4px; font-weight:bold; cursor:pointer; line-height:1;" title="Delete Row">&times;</button>
-    </td>
-  `;
+    </td>`;
 
   tr.innerHTML = cellsHtml;
   tbody.appendChild(tr);
@@ -483,25 +484,18 @@ window.deleteEditorRow = function (btn) {
 };
 
 // ==========================================
-// 9. SCHEDULE EDIT MODAL (THEME-ADAPTIVE)
+// 9. SCHEDULE EDIT MODAL
 // ==========================================
 window.editSection = function (identifier) {
   const sec = sectionsData.find(s => (s.id && String(s.id) === String(identifier)) || (s.code && String(s.code) === String(identifier)));
-  if (!sec) {
-    alert("Section not found.");
-    return;
-  }
+  if (!sec) { alert("Section not found."); return; }
 
   let modal = document.getElementById("admin-edit-section-modal");
   if (modal) modal.remove();
 
   modal = document.createElement("div");
   modal.id = "admin-edit-section-modal";
-  modal.style.cssText = `
-    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-    background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(8px); display: flex; align-items: center;
-    justify-content: center; z-index: 10000; padding: 10px; box-sizing: border-box;
-  `;
+  modal.style.cssText = `position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 10000; padding: 10px; box-sizing: border-box;`;
 
   const editingCells = sec.cells || {};
   const currentSession = sec.session || "MORNING";
@@ -509,10 +503,10 @@ window.editSection = function (identifier) {
 
   let rowsHtml = '';
   slots.forEach((slot, r) => {
+    // Displayed as clean 12-hour text — admin edits this format going forward.
     rowsHtml += `<tr>
-      <td style="background:var(--card-bg); padding:4px; border:1px solid var(--border-color);">
-        <input type="text" class="edit-slot-input" value="${slot}" 
-          style="width:100%; border:none; background:transparent; font-weight:800; color:var(--text-main); font-size:0.8rem; text-align:center; outline:none; box-sizing:border-box;">
+      <td style="background:var(--card-bg); padding:4px; border:1px solid var(--border-color); width:130px; min-width:130px;">
+        <input type="text" class="edit-slot-input" value="${formatTimeRangeDisplay(slot)}" style="width:100%; border:none; background:transparent; font-weight:800; color:var(--text-main); font-size:0.8rem; text-align:center; outline:none; box-sizing:border-box;">
       </td>`;
 
     DAYS.forEach((day, c) => {
@@ -520,21 +514,16 @@ window.editSection = function (identifier) {
       const cell = editingCells[key] || {};
       const isFriday = (c === 4);
       const bgStyle = isFriday ? 'background:var(--table-odl-bg);' : 'background:var(--card-bg);';
-
       rowsHtml += `
-        <td class="edit-day-cell" style="${bgStyle} border:1px solid var(--border-color); padding:4px; vertical-align:top;">
-          <input type="text" class="edit-sub-input" placeholder="Sub Code" value="${cell.subject || cell.name || ''}"
-            style="width:100%; border:none; background:transparent; font-weight:bold; color:var(--text-main); font-size:0.75rem; text-align:center; padding:1px 0; outline:none; box-sizing:border-box;">
-          <input type="text" class="edit-prof-input" placeholder="Teacher" value="${cell.professor || ''}"
-            style="width:100%; border:none; background:transparent; color:var(--text-muted); font-size:0.7rem; text-align:center; padding:1px 0; outline:none; box-sizing:border-box;">
-          <input type="text" class="edit-room-input" placeholder="Room" value="${cell.room || ''}"
-            style="width:100%; border:none; background:transparent; color:var(--primary); font-size:0.68rem; font-weight:600; text-align:center; padding:1px 0; outline:none; box-sizing:border-box;">
-        </td>
-      `;
+        <td class="edit-day-cell" style="${bgStyle} border:1px solid var(--border-color); padding:4px; vertical-align:top; min-width:140px;">
+          <input type="text" class="edit-sub-input" placeholder="Sub Code" value="${cell.subject || cell.name || ''}" style="width:100%; border:none; background:transparent; font-weight:bold; color:var(--text-main); font-size:0.75rem; text-align:center; padding:1px 0; outline:none; box-sizing:border-box;">
+          <input type="text" class="edit-prof-input" placeholder="Teacher" value="${cell.professor || ''}" style="width:100%; border:none; background:transparent; color:var(--text-muted); font-size:0.7rem; text-align:center; padding:1px 0; outline:none; box-sizing:border-box;">
+          <input type="text" class="edit-room-input" placeholder="Room" value="${cell.room || ''}" style="width:100%; border:none; background:transparent; color:var(--primary); font-size:0.68rem; font-weight:600; text-align:center; padding:1px 0; outline:none; box-sizing:border-box;">
+        </td>`;
     });
 
     rowsHtml += `
-      <td style="background:var(--card-bg); border:1px solid var(--border-color); text-align:center; vertical-align:middle; padding:2px;">
+      <td style="background:var(--card-bg); border:1px solid var(--border-color); text-align:center; vertical-align:middle; padding:2px; min-width:44px;">
         <button type="button" onclick="deleteEditorRow(this)" style="background:var(--danger); color:#fff; border:none; width:24px; height:24px; border-radius:4px; font-weight:bold; cursor:pointer; line-height:1;" title="Delete Row">&times;</button>
       </td>
     </tr>`;
@@ -542,37 +531,29 @@ window.editSection = function (identifier) {
 
   modal.innerHTML = `
     <div style="background: var(--card-bg); border-radius: var(--radius-xl); max-width: 1020px; width: 100%; max-height: 95vh; overflow-y: auto; color: var(--text-main); border:1px solid var(--border-color); box-shadow: var(--shadow-modal); font-family: inherit; box-sizing: border-box; padding:0;">
-      
-      <!-- HEADER BANNER -->
       <div style="background:var(--card-bg); padding:20px; text-align:center; border-bottom: 2px solid var(--border-color);">
         <div style="font-size: 1.1rem; font-weight: 800; color: var(--primary); letter-spacing: 0.5px;">ASIAN INSTITUTE OF COMPUTER STUDIES</div>
         <div style="font-size: 1.8rem; font-weight: 900; color: var(--text-main); margin-top:4px; letter-spacing: 1px;">BS CLASS SCHEDULES</div>
         <div style="font-size: 1.1rem; font-weight: 700; color: var(--text-muted);">1<sup>ST</sup> SEMESTER ACADEMIC YEAR</div>
       </div>
-
-      <!-- EDITABLE SECTION CONTROLS -->
       <div style="padding:15px 20px; background:var(--input-bg); border-bottom:1px solid var(--border-color); display:flex; gap:15px; flex-wrap:wrap; align-items:center; justify-content:space-between;">
         <div style="display:flex; gap:12px; align-items:center; flex:1;">
           <span style="font-weight:bold; color:var(--text-main); font-size:0.9rem;">Section Code:</span>
           <input type="text" id="edit-sec-code" value="${sec.code || ''}" style="padding:6px 10px; border:1px solid var(--border-color); border-radius:var(--radius-sm); font-weight:bold; color:var(--text-main); background:var(--card-bg); font-size:0.9rem; width:120px;">
-          
           <span style="font-weight:bold; color:var(--text-main); font-size:0.9rem; margin-left:10px;">Session:</span>
           <select id="edit-sec-session" style="padding:6px 10px; border:1px solid var(--border-color); border-radius:var(--radius-sm); font-weight:bold; color:var(--text-main); background:var(--card-bg); font-size:0.9rem;">
-            <option value="MORNING" ${currentSession === 'MORNING' ? 'selected' : ''}>MORNING (07:00 - 14:00)</option>
-            <option value="AFTERNOON" ${currentSession === 'AFTERNOON' ? 'selected' : ''}>AFTERNOON (09:00 - 20:00)</option>
-            <option value="EVENING" ${currentSession === 'EVENING' ? 'selected' : ''}>EVENING (15:00 - 21:00)</option>
+            <option value="MORNING" ${currentSession === 'MORNING' ? 'selected' : ''}>MORNING (7:00 AM - 2:00 PM)</option>
+            <option value="AFTERNOON" ${currentSession === 'AFTERNOON' ? 'selected' : ''}>AFTERNOON (9:00 AM - 8:00 PM)</option>
+            <option value="EVENING" ${currentSession === 'EVENING' ? 'selected' : ''}>EVENING (3:00 PM - 9:00 PM)</option>
           </select>
         </div>
-        
         <div style="display:flex; gap:10px;">
           <button type="button" class="btn-success" onclick="addEditorRow()" style="padding:7px 14px; font-size:0.85rem;">+ Add Row</button>
           <button class="btn-danger" onclick="document.getElementById('admin-edit-section-modal').remove()" style="padding:7px 14px; font-size:0.85rem;">&times; Close</button>
         </div>
       </div>
-
-      <!-- TIMETABLE GRID -->
-      <div style="padding:15px; overflow-x:auto;">
-        <table style="width:100%; border-collapse:collapse; border:1px solid var(--border-color); background:var(--card-bg);">
+      <div style="padding:15px; overflow-x:auto; -webkit-overflow-scrolling:touch;">
+        <table style="width:100%; min-width:900px; border-collapse:collapse; border:1px solid var(--border-color); background:var(--card-bg);">
           <thead>
             <tr style="background:var(--table-header-bg); color:var(--table-header-text); font-size:0.75rem; text-align:center; font-weight:bold;">
               <th style="padding:10px 4px; border:1px solid var(--border-color); width:130px;">TIME</th>
@@ -581,31 +562,85 @@ window.editSection = function (identifier) {
               <th style="padding:10px 4px; border:1px solid var(--border-color);">WEDNESDAY</th>
               <th style="padding:10px 4px; border:1px solid var(--border-color);">THURSDAY</th>
               <th style="padding:10px 4px; border:1px solid var(--border-color); background:var(--table-odl-header-bg);">FRIDAY ODL<br><span style="font-size:0.65rem; font-weight:normal;">(Sync/Async)</span></th>
-              <th style="padding:10px 4px; border:1px solid var(--border-color); width:35px;">DEL</th>
+              <th style="padding:10px 4px; border:1px solid var(--border-color); width:44px;">DEL</th>
             </tr>
           </thead>
-          <tbody id="admin-edit-table-body">
-            ${rowsHtml}
-          </tbody>
+          <tbody id="admin-edit-table-body">${rowsHtml}</tbody>
         </table>
       </div>
-
-      <!-- FOOTER ACTIONS -->
       <div style="background:var(--header-bar-bg); color:#ffffff; padding:15px; text-align:center; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-        <div style="font-weight:800; font-size:1.1rem; letter-spacing:0.5px;">
-          ${sec.code || 'SECTION'} - ${currentSession} SESSION
-        </div>
+        <div style="font-weight:800; font-size:1.1rem; letter-spacing:0.5px;">${sec.code || 'SECTION'} - ${currentSession} SESSION</div>
         <div style="display:flex; gap:10px;">
           <button class="btn-secondary" onclick="document.getElementById('admin-edit-section-modal').remove()">Cancel</button>
           <button class="btn-primary" onclick="saveSectionChanges('${sec.id || sec.code}')">Save Changes</button>
         </div>
       </div>
-
-    </div>
-  `;
+    </div>`;
 
   document.body.appendChild(modal);
 };
+
+// ---- Room conflict detection helpers ----
+
+function addBookingsFromSection(sectionCode, slots, cells, bookings) {
+  Object.keys(cells).forEach((key) => {
+    const cell = cells[key];
+    if (!cell) return;
+    const room = (cell.room || "").trim();
+    if (!room || room.toUpperCase() === "TBA" || room.toLowerCase() === "online") return;
+
+    const [rStr, cStr] = key.split("-");
+    const dayIdx = parseInt(cStr, 10);
+    const slotStr = slots[parseInt(rStr, 10)];
+    const range = getSlotRangeMinutes(slotStr);
+    if (!range) return;
+
+    bookings.push({
+      sectionCode,
+      dayIdx,
+      room: room.toLowerCase(),
+      startMin: range.startMin,
+      endMin: range.endMin,
+      subject: cell.subject || cell.name || "",
+      slotDisplay: formatTimeRangeDisplay(slotStr),
+    });
+  });
+}
+
+// Builds the full list of room bookings across every section, substituting
+// in the currently-edited section's unsaved values so conflicts are checked
+// against what's about to be saved, not the stale copy still in sectionsData.
+function collectRoomBookings(excludeIdentifier, overrideSectionData) {
+  const bookings = [];
+  sectionsData.forEach((sec) => {
+    const isEditingThis = (sec.id && String(sec.id) === String(excludeIdentifier)) || (sec.code && String(sec.code) === String(excludeIdentifier));
+    if (isEditingThis) return;
+    addBookingsFromSection(sec.code, sec.slots || [], sec.cells || {}, bookings);
+  });
+  if (overrideSectionData) {
+    addBookingsFromSection(overrideSectionData.code, overrideSectionData.slots, overrideSectionData.cells, bookings);
+  }
+  return bookings;
+}
+
+function findRoomConflicts(bookings) {
+  const conflicts = [];
+  for (let i = 0; i < bookings.length; i++) {
+    for (let j = i + 1; j < bookings.length; j++) {
+      const a = bookings[i], b = bookings[j];
+      if (a.sectionCode === b.sectionCode) continue;
+      if (a.dayIdx !== b.dayIdx) continue;
+      if (a.room !== b.room) continue;
+      const overlap = a.startMin < b.endMin && b.startMin < a.endMin;
+      if (overlap) {
+        conflicts.push(
+          `${DAYS_CLEAN[a.dayIdx]} • Room ${a.room.toUpperCase()}: "${a.subject}" (${a.sectionCode}, ${a.slotDisplay}) overlaps with "${b.subject}" (${b.sectionCode}, ${b.slotDisplay})`
+        );
+      }
+    }
+  }
+  return conflicts;
+}
 
 window.saveSectionChanges = async function (identifier) {
   const sec = sectionsData.find(s => (s.id && String(s.id) === String(identifier)) || (s.code && String(s.code) === String(identifier)));
@@ -613,56 +648,39 @@ window.saveSectionChanges = async function (identifier) {
 
   const newCode = document.getElementById("edit-sec-code").value.trim();
   const newSession = document.getElementById("edit-sec-session").value;
-
   const newSlots = [];
   const updatedCells = {};
 
-  const rows = document.querySelectorAll("#admin-edit-table-body tr");
-  rows.forEach((row, r) => {
+  document.querySelectorAll("#admin-edit-table-body tr").forEach((row, r) => {
     const slotInput = row.querySelector(".edit-slot-input");
-    const slotVal = slotInput ? slotInput.value.trim() : `Slot ${r + 1}`;
-    newSlots.push(slotVal);
+    newSlots.push(slotInput ? slotInput.value.trim() : `Slot ${r + 1}`);
 
-    const cells = row.querySelectorAll(".edit-day-cell");
-    cells.forEach((cell, c) => {
+    row.querySelectorAll(".edit-day-cell").forEach((cell, c) => {
       const key = `${r}-${c}`;
       const sub = cell.querySelector(".edit-sub-input")?.value.trim() || "";
       const prof = cell.querySelector(".edit-prof-input")?.value.trim() || "";
       const room = cell.querySelector(".edit-room-input")?.value.trim() || "";
-
-      if (sub || prof || room) {
-        updatedCells[key] = {
-          subject: sub,
-          name: sub,
-          professor: prof,
-          room: room
-        };
-      }
+      if (sub || prof || room) updatedCells[key] = { subject: sub, name: sub, professor: prof, room: room };
     });
   });
 
-  const payload = {
-    code: newCode,
-    title: `${newCode} - ${newSession} SESSION`,
-    session: newSession,
-    slots: newSlots,
-    cells: updatedCells
-  };
+  // Room conflict check before saving
+  const bookings = collectRoomBookings(identifier, { code: newCode, slots: newSlots, cells: updatedCells });
+  const conflicts = findRoomConflicts(bookings);
+  if (conflicts.length > 0) {
+    const preview = conflicts.slice(0, 5).join('\n');
+    const more = conflicts.length > 5 ? `\n...and ${conflicts.length - 5} more conflict(s)` : '';
+    const proceed = confirm(`⚠️ Room Conflict Detected!\n\n${preview}${more}\n\nSave anyway?`);
+    if (!proceed) return;
+  }
+
+  const payload = { code: newCode, title: `${newCode} - ${newSession} SESSION`, session: newSession, slots: newSlots, cells: updatedCells };
 
   try {
     let query = db.from("schedules");
-    if (sec.id) {
-      query = query.update(payload).eq("id", sec.id);
-    } else {
-      query = query.update(payload).eq("code", sec.code);
-    }
-
+    query = sec.id ? query.update(payload).eq("id", sec.id) : query.update(payload).eq("code", sec.code);
     const { error } = await query;
-    if (error) {
-      alert("Failed to save changes: " + error.message);
-      return;
-    }
-
+    if (error) { alert("Failed to save changes: " + error.message); return; }
     alert("Schedule saved successfully!");
     document.getElementById("admin-edit-section-modal")?.remove();
     await window.loadSchedules();
@@ -673,14 +691,10 @@ window.saveSectionChanges = async function (identifier) {
 };
 
 // ==========================================
-// 10. FACULTY DROPDOWN & SCHEDULE RENDERING
+// 10. FACULTY DROPDOWN & TEACHER SCHEDULE
 // ==========================================
 function populateTeacherDropdown() {
-  const selects = [
-    document.getElementById("teacher-name-select-gate"),
-    document.getElementById("teacher-name-select")
-  ].filter(Boolean);
-
+  const selects = [document.getElementById("teacher-name-select-gate"), document.getElementById("teacher-name-select")].filter(Boolean);
   if (selects.length === 0 || !sectionsData) return;
   const currentSelection = localStorage.getItem("aics_teacher_name") || "";
   const teachers = new Set();
@@ -688,9 +702,7 @@ function populateTeacherDropdown() {
   sectionsData.forEach((sec) => {
     if (sec.cells) {
       Object.values(sec.cells).forEach((cell) => {
-        if (cell && cell.professor && cell.professor.trim() !== "") {
-          teachers.add(cell.professor.trim());
-        }
+        if (cell && cell.professor && cell.professor.trim() !== "") teachers.add(cell.professor.trim());
       });
     }
   });
@@ -719,36 +731,39 @@ window.renderTeacherSchedule = function () {
     return;
   }
 
-  let masterSlots = [];
-  sectionsData.forEach((sec) => {
-    (sec.slots || []).forEach((slot) => {
-      if (!masterSlots.includes(slot)) masterSlots.push(slot);
-    });
-  });
-
-  if (masterSlots.length === 0) {
-    masterSlots = getDefaultSlotsForSession("MORNING");
-  }
-
-  let gridMap = {};
+  // Group every matching class by its ACTUAL parsed time range (not the raw
+  // slot string). This is what fixes both the duplicate rows (different
+  // sections storing the same time in different raw formats) and guarantees
+  // correct chronological order, since sorting is done on real minute values.
+  const timeMap = {}; // key: "startMin-endMin" -> { startMin, display, byDay: { dayIdx: [items] } }
   let hasClasses = false;
 
   sectionsData.forEach((sec) => {
     if (!sec.cells || !sec.slots) return;
     sec.slots.forEach((slot, rowIdx) => {
+      const range = getSlotRangeMinutes(slot);
+      if (!range) return;
+
       DAYS.forEach((day, dayIdx) => {
         const cellKey = `${rowIdx}-${dayIdx}`;
         const cell = sec.cells[cellKey];
-        if (cell && cell.professor && cell.professor.trim().toLowerCase() === selectedTeacher.toLowerCase()) {
-          const mapKey = `${slot}_${dayIdx}`;
-          if (!gridMap[mapKey]) gridMap[mapKey] = [];
-          gridMap[mapKey].push({
-            subject: cell.subject || cell.name || "-",
-            section: sec.code || sec.title || "",
-            room: cell.room || "TBA"
-          });
-          hasClasses = true;
+        if (!cell || !cell.professor || cell.professor.trim().toLowerCase() !== selectedTeacher.toLowerCase()) return;
+
+        const timeKey = `${range.startMin}-${range.endMin}`;
+        if (!timeMap[timeKey]) {
+          timeMap[timeKey] = {
+            startMin: range.startMin,
+            display: formatTimeRangeDisplay(slot),
+            byDay: {}
+          };
         }
+        if (!timeMap[timeKey].byDay[dayIdx]) timeMap[timeKey].byDay[dayIdx] = [];
+        timeMap[timeKey].byDay[dayIdx].push({
+          subject: cell.subject || cell.name || "-",
+          section: sec.code || sec.title || "",
+          room: displayRoom(cell.room, dayIdx)
+        });
+        hasClasses = true;
       });
     });
   });
@@ -758,24 +773,21 @@ window.renderTeacherSchedule = function () {
     return;
   }
 
+  const sortedRows = Object.values(timeMap).sort((a, b) => a.startMin - b.startMin);
+
   let html = `
   <div class="section-card" style="margin-bottom:20px;">
-    <div class="section-header-bar">
-      <span class="portal-tag">Faculty Schedule: ${selectedTeacher}</span>
-    </div>
+    <div class="section-header-bar"><span class="portal-tag">Faculty Schedule: ${selectedTeacher}</span></div>
     <div class="schedule-table-container">
       <table class="responsive-table">
-        <thead>
-          <tr>
-            <th>TIME</th>`;
+        <thead><tr><th>TIME</th>`;
   DAYS.forEach((d) => (html += `<th>${d}</th>`));
   html += '</tr></thead><tbody>';
 
-  masterSlots.forEach((slot) => {
-    html += `<tr><td class="time-cell">${slot}</td>`;
+  sortedRows.forEach((row) => {
+    html += `<tr><td class="time-cell">${row.display}</td>`;
     DAYS.forEach((d, dayIdx) => {
-      const mapKey = `${slot}_${dayIdx}`;
-      const items = gridMap[mapKey];
+      const items = row.byDay[dayIdx];
       if (items && items.length > 0) {
         html += '<td class="class-cell">';
         items.forEach((item) => {
@@ -815,7 +827,6 @@ function renderSections() {
 
     const header = document.createElement("div");
     header.className = "section-header-bar";
-
     const toggleBtn = document.createElement("button");
     toggleBtn.className = "section-toggle-btn";
     toggleBtn.innerHTML = `<span>${sec.title || sec.code}</span>`;
@@ -829,15 +840,16 @@ function renderSections() {
     html += '</tr></thead><tbody>';
 
     (sec.slots || []).forEach((slot, rowIdx) => {
-      html += `<tr><td class="time-cell">${slot}</td>`;
+      html += `<tr><td class="time-cell">${formatTimeRangeDisplay(slot)}</td>`;
       DAYS.forEach((d, colIdx) => {
         const key = `${rowIdx}-${colIdx}`;
         const cell = sec.cells ? sec.cells[key] : null;
         if (cell && (cell.subject || cell.name)) {
           const displaySubject = cell.subject || cell.name;
+          const roomText = displayRoom(cell.room, colIdx);
           html += `<td class="class-cell" data-key="${key}" data-sub="${displaySubject}" data-prof="${cell.professor || ''}" data-room="${cell.room || ''}">
             <div class="cell-code">${displaySubject}</div>
-            <div class="cell-name">${cell.professor || ''} (${cell.room || 'TBA'})</div>
+            <div class="cell-name">${cell.professor || ''} (${roomText})</div>
           </td>`;
         } else {
           html += `<td class="class-cell" data-key="${key}"><div class="cell-empty">-</div></td>`;
@@ -860,10 +872,11 @@ function renderSections() {
         if (sec.cells && sec.cells[key]) {
           const cell = sec.cells[key];
           const [r, c] = key.split("-");
-          document.getElementById("subject-card-time").textContent = `${DAYS_CLEAN[c] || 'Day'} · ${(sec.slots && sec.slots[r]) || ''}`;
+          const cIdx = parseInt(c, 10);
+          document.getElementById("subject-card-time").textContent = `${DAYS_CLEAN[cIdx] || 'Day'} · ${formatTimeRangeDisplay((sec.slots && sec.slots[r]) || '')}`;
           document.getElementById("subject-card-code").textContent = cell.subject || cell.name || "-";
           document.getElementById("subject-card-name").textContent = cell.name || cell.subject || "-";
-          document.getElementById("subject-card-room").textContent = cell.room || "-";
+          document.getElementById("subject-card-room").textContent = displayRoom(cell.room, cIdx);
           document.getElementById("subject-card-professor").textContent = cell.professor || "-";
           document.getElementById("subject-details-overlay").classList.add("open");
         }
@@ -879,19 +892,109 @@ function renderSections() {
 }
 
 // ==========================================
-// 12. SESSION FILTERS & AUTOSEARCH LOGIC
+// 12. NEXT CLASS CARDS (student + teacher)
+// ==========================================
+function renderNextClassCard() {
+  const container = document.getElementById("next-class-container");
+  if (!container) return;
+
+  const savedSection = localStorage.getItem("aics_student_section");
+  if (!savedSection || isViewingAllSections) { container.innerHTML = ""; return; }
+
+  const sec = sectionsData.find(s => s.code && s.code.toLowerCase() === savedSection.toLowerCase());
+  if (!sec || !sec.cells || !sec.slots) { container.innerHTML = ""; return; }
+
+  const cellDayIndex = getManilaCellDayIndex();
+  if (cellDayIndex === null) { container.innerHTML = `<div class="next-class-empty">No classes scheduled today 🎉</div>`; return; }
+
+  const minutesNow = getManilaMinutesNow();
+  let best = null;
+
+  Object.keys(sec.cells).forEach((key) => {
+    const [dStr, sStr] = key.split("-");
+    const d = parseInt(dStr, 10);
+    if (d !== cellDayIndex) return;
+    const sIdx = parseInt(sStr, 10);
+    const startMinutes = getSlotStartMinutes(sec.slots[sIdx]);
+    if (startMinutes === null) return;
+    const diff = startMinutes - minutesNow;
+    if (diff < 0) return;
+    if (!best || diff < best.diff) best = { diff, cell: sec.cells[key], slot: sec.slots[sIdx], dayIdx: d };
+  });
+
+  if (!best) { container.innerHTML = `<div class="next-class-empty">No more classes today 🎉</div>`; return; }
+
+  const hours = Math.floor(best.diff / 60);
+  const mins = best.diff % 60;
+  const countdownText = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+  const roomText = displayRoom(best.cell.room, best.dayIdx);
+
+  container.innerHTML = `
+    <div class="next-class-card">
+      <div class="next-class-eyebrow">Next Class</div>
+      <div class="next-class-subject">${best.cell.subject || best.cell.name || "—"}</div>
+      <div class="next-class-meta">🕒 ${formatTimeRangeDisplay(best.slot)} &nbsp;•&nbsp; 📍 ${roomText} &nbsp;•&nbsp; 👤 ${best.cell.professor || "—"}</div>
+      <div class="next-class-countdown">Starts in <span class="num">${countdownText}</span></div>
+    </div>`;
+}
+
+function renderTeacherNextClassCard() {
+  const container = document.getElementById("teacher-next-class-container");
+  if (!container) return;
+
+  const selectedTeacher = localStorage.getItem("aics_teacher_name") || "";
+  if (!selectedTeacher) { container.innerHTML = ""; return; }
+
+  const cellDayIndex = getManilaCellDayIndex();
+  if (cellDayIndex === null) { container.innerHTML = `<div class="next-class-empty">No classes scheduled today 🎉</div>`; return; }
+
+  const minutesNow = getManilaMinutesNow();
+  let best = null;
+
+  sectionsData.forEach((sec) => {
+    if (!sec.cells || !sec.slots) return;
+    Object.keys(sec.cells).forEach((key) => {
+      const [dStr, sStr] = key.split("-");
+      const d = parseInt(dStr, 10);
+      if (d !== cellDayIndex) return;
+      const cell = sec.cells[key];
+      if (!cell.professor || cell.professor.trim().toLowerCase() !== selectedTeacher.toLowerCase()) return;
+      const sIdx = parseInt(sStr, 10);
+      const startMinutes = getSlotStartMinutes(sec.slots[sIdx]);
+      if (startMinutes === null) return;
+      const diff = startMinutes - minutesNow;
+      if (diff < 0) return;
+      if (!best || diff < best.diff) best = { diff, cell, slot: sec.slots[sIdx], dayIdx: d, section: sec.code || sec.title };
+    });
+  });
+
+  if (!best) { container.innerHTML = `<div class="next-class-empty">No more classes today 🎉</div>`; return; }
+
+  const hours = Math.floor(best.diff / 60);
+  const mins = best.diff % 60;
+  const countdownText = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+  const roomText = displayRoom(best.cell.room, best.dayIdx);
+
+  container.innerHTML = `
+    <div class="next-class-card">
+      <div class="next-class-eyebrow">Next Class</div>
+      <div class="next-class-subject">${best.cell.subject || best.cell.name || "—"}</div>
+      <div class="next-class-meta">🕒 ${formatTimeRangeDisplay(best.slot)} &nbsp;•&nbsp; 📍 ${roomText} &nbsp;•&nbsp; 🏷️ Sec: ${best.section}</div>
+      <div class="next-class-countdown">Starts in <span class="num">${countdownText}</span></div>
+    </div>`;
+}
+
+// ==========================================
+// 13. SESSION FILTERS & AUTOSEARCH
 // ==========================================
 function setupSessionFilters() {
   const filterContainer = document.getElementById("session-filter-buttons");
   if (!filterContainer) return;
-
   filterContainer.addEventListener("click", (e) => {
     const btn = e.target.closest(".session-filter-btn");
     if (!btn) return;
-
     document.querySelectorAll(".session-filter-btn").forEach((b) => b.classList.remove("active"));
     btn.classList.add("active");
-
     activeSession = btn.getAttribute("data-session") || "MORNING";
     applyFilters();
   });
@@ -899,7 +1002,7 @@ function setupSessionFilters() {
 
 function applyFilters() {
   const savedSection = localStorage.getItem("aics_student_section");
-  const input = document.getElementById("student-search-input") || document.querySelector(".chrome-search-input");
+  const input = document.getElementById("student-search-input");
   const val = input ? input.value.trim().toLowerCase() : "";
 
   document.querySelectorAll("#sections-container .section-card").forEach((card) => {
@@ -912,7 +1015,6 @@ function applyFilters() {
       const secCode = (card.dataset.sectionCode || "").trim().toLowerCase();
       const secTitle = (card.dataset.sectionTitle || "").trim().toLowerCase();
       const isMatch = secCode === targetSection || secTitle === targetSection || secCode.includes(targetSection) || secTitle.includes(targetSection);
-
       card.style.display = isMatch ? "block" : "none";
       card.querySelectorAll(".class-cell").forEach((c) => c.classList.remove("highlight", "dimmed"));
       return;
@@ -930,49 +1032,35 @@ function applyFilters() {
       const prof = (cell.dataset.prof || "").toLowerCase();
       const room = (cell.dataset.room || "").toLowerCase();
       if (sub.includes(val) || prof.includes(val) || room.includes(val)) {
-        cell.classList.add("highlight");
-        cell.classList.remove("dimmed");
-        found = true;
+        cell.classList.add("highlight"); cell.classList.remove("dimmed"); found = true;
       } else {
-        cell.classList.remove("highlight");
-        cell.classList.add("dimmed");
+        cell.classList.remove("highlight"); cell.classList.add("dimmed");
       }
     });
 
     const secCode = (card.dataset.sectionCode || "").toLowerCase();
     const secTitle = (card.dataset.sectionTitle || "").toLowerCase();
-    const searchMatches = found || secCode.includes(val) || secTitle.includes(val);
-
-    card.style.display = sessionMatches && searchMatches ? "block" : "none";
+    card.style.display = (sessionMatches && (found || secCode.includes(val) || secTitle.includes(val))) ? "block" : "none";
   });
 }
 
 function initSearchDropdown() {
-  const searchInput = document.getElementById("student-search-input") || document.querySelector(".chrome-search-input");
-  const searchContainer = document.querySelector(".chrome-search-container") || document.querySelector(".search-box");
+  const searchInput = document.getElementById("student-search-input");
+  const searchContainer = document.querySelector(".chrome-search-container");
   if (!searchInput || !searchContainer) return;
-
   let dropdown = searchContainer.querySelector(".chrome-dropdown");
   if (!dropdown) {
     dropdown = document.createElement("div");
     dropdown.className = "chrome-dropdown";
     searchContainer.appendChild(dropdown);
   }
-
-  searchInput.addEventListener("input", (e) => {
-    buildSuggestions(e.target.value);
-    applyFilters();
-  });
+  searchInput.addEventListener("input", (e) => { buildSuggestions(e.target.value); applyFilters(); });
 }
 
 function buildSuggestions(query) {
   const dropdown = document.querySelector(".chrome-dropdown");
   if (!dropdown) return;
-
-  if (!query || !query.trim()) {
-    dropdown.classList.remove("active");
-    return;
-  }
+  if (!query || !query.trim()) { dropdown.classList.remove("active"); return; }
 
   const cleanQuery = query.trim().toLowerCase();
   const suggestions = [];
@@ -981,104 +1069,66 @@ function buildSuggestions(query) {
   sectionsData.forEach((sec) => {
     if (sec.code && sec.code.toLowerCase().includes(cleanQuery)) {
       const key = `sec-${sec.code}`;
-      if (!addedKeys.has(key)) {
-        addedKeys.add(key);
-        suggestions.push({ text: sec.code, type: "Section" });
-      }
+      if (!addedKeys.has(key)) { addedKeys.add(key); suggestions.push({ text: sec.code, type: "Section" }); }
     }
     if (sec.cells) {
       Object.values(sec.cells).forEach((cell) => {
         if (cell.professor && cell.professor.toLowerCase().includes(cleanQuery)) {
           const profName = cell.professor.trim();
           const key = `prof-${profName.toLowerCase()}`;
-          if (!addedKeys.has(key)) {
-            addedKeys.add(key);
-            suggestions.push({ text: profName, type: "Faculty" });
-          }
+          if (!addedKeys.has(key)) { addedKeys.add(key); suggestions.push({ text: profName, type: "Faculty" }); }
         }
         if (cell.subject && cell.subject.toLowerCase().includes(cleanQuery)) {
           const subName = cell.subject.trim();
           const key = `sub-${subName.toLowerCase()}`;
-          if (!addedKeys.has(key)) {
-            addedKeys.add(key);
-            suggestions.push({ text: subName, type: "Subject" });
-          }
+          if (!addedKeys.has(key)) { addedKeys.add(key); suggestions.push({ text: subName, type: "Subject" }); }
         }
       });
     }
   });
 
-  if (suggestions.length === 0) {
-    dropdown.classList.remove("active");
-    return;
-  }
+  if (suggestions.length === 0) { dropdown.classList.remove("active"); return; }
 
   dropdown.innerHTML = suggestions.slice(0, 6).map(s => `
     <div class="dropdown-item" onclick="selectSuggestion('${s.text.replace(/'/g, "\\'")}')">
-      <span>${s.text}</span>
-      <small style="opacity:0.6; margin-left:8px;">${s.type}</small>
-    </div>
-  `).join('');
-
+      <span>${s.text}</span><small style="opacity:0.6; margin-left:8px;">${s.type}</small>
+    </div>`).join('');
   dropdown.classList.add("active");
 }
 
 window.selectSuggestion = function (text) {
-  const searchInput = document.getElementById("student-search-input") || document.querySelector(".chrome-search-input");
-  if (searchInput) {
-    searchInput.value = text;
-    applyFilters();
-  }
+  const searchInput = document.getElementById("student-search-input");
+  if (searchInput) { searchInput.value = text; applyFilters(); }
   const dropdown = document.querySelector(".chrome-dropdown");
   if (dropdown) dropdown.classList.remove("active");
 };
 
 // ==========================================
-// 13. NOTIFICATION & SYSTEM ALERT HANDLERS (FCM INTEGRATION)
+// 14. NOTIFICATIONS (FCM INTEGRATION)
 // ==========================================
-window.enablePhoneAlerts = async function () {
-  window.toggleNotifications();
-};
+window.enablePhoneAlerts = async function () { window.toggleNotifications(); };
 
 window.toggleNotifications = async function () {
   if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.PushNotifications) {
     try {
       const PushNotifications = window.Capacitor.Plugins.PushNotifications;
-      
       let permStatus = await PushNotifications.checkPermissions();
-      if (permStatus.receive === 'prompt') {
-        permStatus = await PushNotifications.requestPermissions();
-      }
-
-      if (permStatus.receive !== 'granted') {
-        alert("Push notification permission was denied.");
-        return;
-      }
+      if (permStatus.receive === 'prompt') permStatus = await PushNotifications.requestPermissions();
+      if (permStatus.receive !== 'granted') { alert("Push notification permission was denied."); return; }
 
       await PushNotifications.register();
 
       PushNotifications.addListener('registration', async (token) => {
-        console.log('FCM Token successfully received:', token.value);
         localStorage.setItem("aics_fcm_token", token.value);
         await saveDeviceTokenToSupabase(token.value);
       });
-
-      PushNotifications.addListener('registrationError', (error) => {
-        console.error('Error during push registration:', JSON.stringify(error));
-      });
-
-      PushNotifications.addListener('pushNotificationReceived', (notification) => {
-        console.log('Push notification received:', JSON.stringify(notification));
-      });
-
-      PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
-        console.log('Push notification action performed:', JSON.stringify(notification));
-      });
+      PushNotifications.addListener('registrationError', (error) => console.error('Registration error:', JSON.stringify(error)));
+      PushNotifications.addListener('pushNotificationReceived', (n) => console.log('Push received:', JSON.stringify(n)));
+      PushNotifications.addListener('pushNotificationActionPerformed', (n) => console.log('Push action:', JSON.stringify(n)));
 
       localStorage.setItem("aics_notifications_enabled", "true");
       alert("True push notifications enabled successfully!");
       updateNotificationButtons();
-
     } catch (err) {
       console.error("Capacitor PushNotification error:", err);
       fallbackWebNotification();
@@ -1088,38 +1138,36 @@ window.toggleNotifications = async function () {
   }
 };
 
+// Role-aware token saving: if the teacher portal is the active view and a
+// teacher profile is selected, the token gets tied to that teacher's name
+// (not whatever leftover section_code was in localStorage). Otherwise it's
+// tied to the student's saved section, as before.
 async function saveDeviceTokenToSupabase(fcmToken) {
+  if (!fcmToken) return;
+
+  const activeView = document.querySelector(".view.active")?.id;
+  const savedTeacher = localStorage.getItem("aics_teacher_name");
   const savedSection = localStorage.getItem("aics_student_section");
-  if (!savedSection || !fcmToken) return;
+
+  let payload = null;
+  if (activeView === "teacher-view" && savedTeacher) {
+    payload = { section_code: null, teacher_name: savedTeacher, token: fcmToken, updated_at: new Date() };
+  } else if (savedSection) {
+    payload = { section_code: savedSection, teacher_name: null, token: fcmToken, updated_at: new Date() };
+  } else {
+    return; // nothing to associate this token with yet
+  }
 
   try {
-    const { error } = await db.from("device_tokens").upsert([
-      { 
-        section_code: savedSection, 
-        token: fcmToken,
-        updated_at: new Date()
-      }
-    ], { onConflict: 'token' });
-
-    if (error) {
-      console.error("Error saving FCM token to Supabase:", error.message);
-    } else {
-      console.log("FCM Token successfully synced to Supabase database.");
-    }
+    const { error } = await db.from("device_tokens").upsert([payload], { onConflict: 'token' });
+    if (error) console.error("Error saving FCM token:", error.message);
   } catch (err) {
     console.error("Exception saving FCM token:", err);
   }
 }
 
-async function scheduleClassNotifications() {
-  console.log("FCM cloud notifications active.");
-}
-
 function fallbackWebNotification() {
-  if (!("Notification" in window)) {
-    alert("Notifications are not supported on this device/browser.");
-    return;
-  }
+  if (!("Notification" in window)) { alert("Notifications are not supported on this device/browser."); return; }
   if (Notification.permission === "granted") {
     localStorage.setItem("aics_notifications_enabled", "true");
     alert("Phone alerts enabled!");
@@ -1140,18 +1188,98 @@ function fallbackWebNotification() {
 function updateNotificationButtons() {
   const isEnabled = localStorage.getItem("aics_notifications_enabled") === "true";
   document.querySelectorAll("#student-notify-btn, #teacher-notify-btn, .enable-alerts-btn").forEach((btn) => {
-    if (isEnabled) {
-      btn.textContent = "🔔 Phone Alerts Active";
-      btn.classList.add("active");
-    } else {
-      btn.textContent = "🔕 Enable Phone Alerts";
-      btn.classList.remove("active");
-    }
+    if (isEnabled) { btn.textContent = "🔔 Phone Alerts Active"; btn.classList.add("active"); }
+    else { btn.textContent = "🔕 Enable Phone Alerts"; btn.classList.remove("active"); }
   });
 }
 
 // ==========================================
-// 14. INITIALIZATION
+// 15. ROOM CONFLICT REPORTS
+// ==========================================
+window.openReportModal = function () {
+  const savedSection = localStorage.getItem("aics_student_section");
+  const sectionInput = document.getElementById("report-section-input");
+  if (sectionInput) sectionInput.value = savedSection || "";
+  document.getElementById("report-modal-overlay")?.classList.add("open");
+  document.getElementById("hamburger-menu")?.classList.remove("active");
+};
+
+window.closeReportModal = function () {
+  document.getElementById("report-modal-overlay")?.classList.remove("open");
+};
+
+window.submitRoomReport = async function () {
+  const section = document.getElementById("report-section-input")?.value.trim() || "";
+  const room = document.getElementById("report-room-input")?.value.trim() || "";
+  const day = document.getElementById("report-day-select")?.value || "";
+  const slot = document.getElementById("report-slot-input")?.value.trim() || "";
+  const details = document.getElementById("report-details-input")?.value.trim() || "";
+
+  if (!room || !day || !slot) {
+    alert("Please fill in room, day, and time slot.");
+    return;
+  }
+
+  try {
+    const { error } = await db.from("room_reports").insert([{
+      section_code: section || null, room, day, time_slot: slot, details: details || null, status: "pending"
+    }]);
+    if (error) { alert("Failed to submit report: " + error.message); return; }
+
+    alert("Report submitted! Admin has been notified.");
+    closeReportModal();
+    document.getElementById("report-room-input").value = "";
+    document.getElementById("report-day-select").value = "";
+    document.getElementById("report-slot-input").value = "";
+    document.getElementById("report-details-input").value = "";
+  } catch (err) {
+    console.error("Error submitting room report:", err);
+    alert("Error submitting report.");
+  }
+};
+
+async function fetchAndRenderReports() {
+  const container = document.getElementById("admin-reports-list");
+  if (!container) return;
+
+  try {
+    const { data, error } = await db.from("room_reports").select("*").order("created_at", { ascending: false });
+    if (error) { container.innerHTML = `<p style="color:var(--text-muted); padding:12px;">Could not load reports.</p>`; return; }
+    if (!data || data.length === 0) { container.innerHTML = `<p style="color:var(--text-muted); padding:12px;">No reports submitted.</p>`; return; }
+
+    container.innerHTML = data.map(r => {
+      const badgeColor = r.status === 'pending' ? 'var(--danger)' : r.status === 'resolved' ? 'var(--success)' : 'var(--secondary)';
+      return `
+        <div class="report-item">
+          <div class="report-item-header">
+            <span class="report-item-badge" style="background:${badgeColor};">${r.status}</span>
+            <span class="report-item-meta">${r.section_code || 'Unknown Section'} • ${r.day} • ${r.time_slot}</span>
+          </div>
+          <div class="report-item-details"><strong>Room:</strong> ${r.room}${r.details ? `<br><strong>Details:</strong> ${r.details}` : ''}</div>
+          ${r.status === 'pending' ? `
+            <div class="report-item-actions">
+              <button class="btn-success" style="padding:6px 14px; font-size:0.8rem;" onclick="resolveReport('${r.id}', 'resolved')">Mark Resolved</button>
+              <button class="btn-secondary" style="padding:6px 14px; font-size:0.8rem;" onclick="resolveReport('${r.id}', 'dismissed')">Dismiss</button>
+            </div>` : ''}
+        </div>`;
+    }).join('');
+  } catch (err) {
+    console.error("Error fetching reports:", err);
+  }
+}
+
+window.resolveReport = async function (id, newStatus) {
+  try {
+    const { error } = await db.from("room_reports").update({ status: newStatus }).eq("id", id);
+    if (error) { alert("Failed to update report: " + error.message); return; }
+    await fetchAndRenderReports();
+  } catch (err) {
+    console.error("Error updating report:", err);
+  }
+};
+
+// ==========================================
+// 16. INITIALIZATION
 // ==========================================
 document.addEventListener("DOMContentLoaded", () => {
   initTheme();
@@ -1159,4 +1287,9 @@ document.addEventListener("DOMContentLoaded", () => {
   setupSessionFilters();
   initSearchDropdown();
   updateNotificationButtons();
+  updateBottomNavActive("home-view");
+  setInterval(() => {
+    renderNextClassCard();
+    renderTeacherNextClassCard();
+  }, 30000);
 });
