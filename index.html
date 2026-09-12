@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>AICSchedule - Class Schedule Portal</title>
   <link rel="stylesheet" href="style.css">
-    
+
   <link rel="icon" type="image/jpeg" href="logo.jpg">
   <link rel="apple-touch-icon" href="logo.jpg">
   <link rel="manifest" href="manifest.json">
@@ -16,14 +16,12 @@
   <div class="topbar"></div>
 
   <header class="wrap" style="padding-bottom: 0;">
-    <!-- Top Navigation Header -->
     <nav class="nav-bar" aria-label="Main Navigation">
       <span class="portal-tag" id="portal-tag-label">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--primary);"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
         AICSchedule
       </span>
       <div class="nav-actions">
-        <!-- Hamburger Container containing menu options -->
         <div class="hamburger-container" id="hamburger-container">
           <button class="hamburger-btn" id="hamburger-btn" aria-label="Toggle Navigation Menu" aria-expanded="false" onclick="toggleHamburger(event)">
             <span class="bar"></span>
@@ -52,6 +50,11 @@
               Admin Portal
             </button>
             <hr class="menu-divider">
+            <button class="menu-item" id="report-nav-btn" role="menuitem" onclick="openReportModal()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+              Report Room Conflict
+            </button>
+            <hr class="menu-divider">
             <button class="menu-item" id="theme-toggle-btn" role="menuitem" onclick="toggleTheme()">☀️ Light Mode</button>
           </div>
         </div>
@@ -65,7 +68,7 @@
       <div class="hero-container">
         <h1 class="hero-title">Class Schedule Management System</h1>
         <p class="hero-subtitle">Your centralized hub for tracking real-time academic schedules, classroom locations, and automated alerts.</p>
-        
+
         <div class="portal-choices">
           <button class="choice-card-btn" onclick="openStudentLogin()">
             🎓 Student Portal
@@ -88,7 +91,6 @@
 
     <!-- STUDENT VIEW -->
     <section id="student-view" class="view">
-      <!-- Student Login Gate -->
       <div id="student-gate-card" class="auth-container">
         <h2>Student Portal Access</h2>
         <p>Enter your section code to access your tailored class schedule.</p>
@@ -101,11 +103,12 @@
         </form>
       </div>
 
-      <!-- Student Schedule View (Shown after section entered) -->
       <div id="student-main-content" style="display:none;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:12px;">
+        <div id="next-class-container"></div>
+
+        <div class="portal-status-bar">
           <span id="active-student-section-badge" style="background:var(--primary); color:#fff; padding:6px 14px; border-radius:var(--radius-pill); font-weight:700; font-size:0.85rem;">Section: --</span>
-          <div style="display:flex; gap:10px; align-items:center;">
+          <div class="status-actions">
             <button class="enable-alerts-btn notify-btn" id="student-notify-btn" onclick="enablePhoneAlerts()">Enable Phone Alerts</button>
             <button class="btn-secondary" onclick="logoutStudent()">Switch Section</button>
           </div>
@@ -126,7 +129,6 @@
               </div>
               <div class="chrome-dropdown" id="chrome-dropdown"></div>
             </div>
-            <div class="search-meta" id="student-search-meta"></div>
           </div>
         </div>
 
@@ -144,7 +146,6 @@
 
     <!-- TEACHER VIEW -->
     <section id="teacher-view" class="view">
-      <!-- Teacher Login Gate -->
       <div id="teacher-gate-card" class="auth-container">
         <h2>Faculty Portal Access</h2>
         <p>Select your faculty profile to access your weekly teaching timetable.</p>
@@ -159,11 +160,12 @@
         </form>
       </div>
 
-      <!-- Teacher Schedule View (Shown after profile selected) -->
       <div id="teacher-main-content" style="display:none;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:12px;">
+        <div id="teacher-next-class-container"></div>
+
+        <div class="portal-status-bar">
           <span id="active-teacher-badge" style="background:var(--success); color:#fff; padding:6px 14px; border-radius:var(--radius-pill); font-weight:700; font-size:0.85rem;">Faculty: --</span>
-          <div style="display:flex; gap:10px; align-items:center;">
+          <div class="status-actions">
             <button class="enable-alerts-btn notify-btn" id="teacher-notify-btn" onclick="enablePhoneAlerts()">Enable Phone Alerts</button>
             <button class="btn-secondary" onclick="logoutTeacher()">Switch Profile</button>
           </div>
@@ -182,7 +184,6 @@
 
     <!-- ADMIN VIEW -->
     <section id="admin-view" class="view">
-      <!-- Admin Login Gate -->
       <div id="admin-gate-card" class="auth-container">
         <h2>Admin Portal Access</h2>
         <p>Enter your administrative security code to modify section layouts and schedule allocations.</p>
@@ -195,11 +196,12 @@
         </form>
       </div>
 
-      <!-- Admin Main Content -->
       <div id="admin-main-content" style="display:none;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <div class="portal-status-bar">
           <span style="background:var(--danger); color:#fff; padding:6px 14px; border-radius:var(--radius-pill); font-weight:700; font-size:0.85rem;">Mode: Administrator</span>
-          <button class="btn-secondary" onclick="logoutAdmin()">Exit Admin</button>
+          <div class="status-actions">
+            <button class="btn-secondary" onclick="logoutAdmin()">Exit Admin</button>
+          </div>
         </div>
 
         <div class="schedule-header" style="margin-bottom:20px;">
@@ -209,7 +211,6 @@
           </div>
         </div>
 
-        <!-- Add New Section Card -->
         <div class="add-section-card">
           <h3>➕ Add New Section</h3>
           <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:16px; margin: 16px 0;">
@@ -233,16 +234,40 @@
           <button class="btn-primary" onclick="addNewSection()">Create Section</button>
         </div>
 
-        <!-- Sections List for Editing -->
         <div style="margin-bottom:16px;">
           <h3 style="font-size:1.2rem; font-weight:800;">📋 Existing Sections</h3>
         </div>
         <div id="admin-sections-list"></div>
+
+        <div style="margin: 28px 0 16px;">
+          <h3 style="font-size:1.2rem; font-weight:800;">📢 Room Conflict Reports</h3>
+        </div>
+        <div id="admin-reports-list"></div>
       </div>
     </section>
   </main>
 
-  <!-- Modal Overlay for Subject Details View -->
+  <!-- Bottom Tab Bar -->
+  <nav class="bottom-nav" aria-label="Bottom Navigation">
+    <button class="bottom-nav-item" id="bn-home" onclick="setView('home-view')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
+      Home
+    </button>
+    <button class="bottom-nav-item" id="bn-student" onclick="openStudentLogin()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path></svg>
+      Student
+    </button>
+    <button class="bottom-nav-item" id="bn-teacher" onclick="openTeacherLogin()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+      Teacher
+    </button>
+    <button class="bottom-nav-item" id="bn-admin" onclick="openAdminModal()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+      Admin
+    </button>
+  </nav>
+
+  <!-- Subject Details Modal -->
   <div class="overlay" id="subject-details-overlay" aria-hidden="true">
     <div class="details-card-modal" role="dialog" aria-modal="true" aria-labelledby="subject-card-code">
       <div class="details-card-header" id="subject-card-time">Monday · 7:00 - 8:00</div>
@@ -270,38 +295,48 @@
     </div>
   </div>
 
-  <!-- Admin Verification Modal -->
-  <div class="overlay" id="admin-login-modal" aria-hidden="true">
+  <!-- Room Conflict Report Modal -->
+  <div class="overlay" id="report-modal-overlay" aria-hidden="true">
     <div class="modal" role="dialog" aria-modal="true">
-      <h3 style="margin-top:0; font-size:1.25rem; font-weight:800;">Admin Verification</h3>
-      <p style="font-size:0.875rem; color:var(--text-muted); margin-bottom:20px;">Enter administrative passcode to enable edit mode across portals.</p>
-      <form onsubmit="event.preventDefault(); submitAdminLogin();" style="display:flex; flex-direction:column; gap:16px;">
+      <h3 style="margin-top:0; font-size:1.25rem; font-weight:800;">⚠️ Report Room Conflict</h3>
+      <p style="font-size:0.875rem; color:var(--text-muted); margin-bottom:20px;">Let admin know if your assigned room is being used by another class.</p>
+      <form onsubmit="event.preventDefault(); submitRoomReport();" class="auth-form">
         <div>
-          <label for="admin-pass-input">Passcode:</label>
-          <input type="password" id="admin-pass-input" placeholder="Enter Passcode" required>
+          <label for="report-section-input">Section Code:</label>
+          <input type="text" id="report-section-input" placeholder="e.g. BS5EA">
+        </div>
+        <div>
+          <label for="report-room-input">Room:</label>
+          <input type="text" id="report-room-input" placeholder="e.g. CL1" required>
+        </div>
+        <div>
+          <label for="report-day-select">Day:</label>
+          <select id="report-day-select" required>
+            <option value="">-- Select Day --</option>
+            <option value="Monday">Monday</option>
+            <option value="Tuesday">Tuesday</option>
+            <option value="Wednesday">Wednesday</option>
+            <option value="Thursday">Thursday</option>
+            <option value="Friday ODL">Friday ODL</option>
+          </select>
+        </div>
+        <div>
+          <label for="report-slot-input">Time Slot:</label>
+          <input type="text" id="report-slot-input" placeholder="e.g. 2:00 PM - 3:00 PM" required>
+        </div>
+        <div>
+          <label for="report-details-input">Details:</label>
+          <textarea id="report-details-input" rows="3" placeholder="Describe the issue..."></textarea>
         </div>
         <div style="display:flex; gap:10px;">
-          <button type="submit" class="btn-primary" style="flex:1;">Login</button>
-          <button type="button" class="btn-secondary" onclick="closeAdminModal()" style="flex:1;">Cancel</button>
+          <button type="submit" class="btn-primary" style="flex:1;">Submit Report</button>
+          <button type="button" class="btn-secondary" onclick="closeReportModal()" style="flex:1;">Cancel</button>
         </div>
       </form>
     </div>
   </div>
-  
-  <script>
-    // Inline Toggle Theme function to handle switching modes dynamically
-    function toggleTheme() {
-      const body = document.body;
-      const themeBtn = document.getElementById('theme-toggle-btn');
-      body.classList.toggle('dark-mode');
-      
-      if (body.classList.contains('dark-mode')) {
-        themeBtn.innerHTML = '☀️ Light Mode';
-      } else {
-        themeBtn.innerHTML = '🌙 Dark Mode';
-      }
-    }
 
+  <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js')
@@ -313,5 +348,4 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="script.js"></script>
 </body>
-  </html>
-          
+</html>
