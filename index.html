@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>AICSchedule - Class Schedule Portal</title>
   <link rel="stylesheet" href="style.css">
-
   <link rel="icon" type="image/jpeg" href="logo.jpg">
   <link rel="apple-touch-icon" href="logo.jpg">
   <link rel="manifest" href="manifest.json">
@@ -22,40 +21,26 @@
         AICSchedule
       </span>
       <div class="nav-actions">
+        <button class="nav-btn" id="notif-bell-btn" onclick="openNotificationCenter()" aria-label="Notifications" style="position:relative;">
+          🔔
+          <span id="notif-count-badge" class="notif-badge" style="display:none;">0</span>
+        </button>
         <div class="hamburger-container" id="hamburger-container">
           <button class="hamburger-btn" id="hamburger-btn" aria-label="Toggle Navigation Menu" aria-expanded="false" onclick="toggleHamburger(event)">
-            <span class="bar"></span>
-            <span class="bar"></span>
-            <span class="bar"></span>
+            <span class="bar"></span><span class="bar"></span><span class="bar"></span>
           </button>
           <div class="hamburger-menu" id="hamburger-menu" role="menu">
-            <button class="menu-item" id="home-nav-btn" role="menuitem" onclick="setView('home-view')">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
-              Home
-            </button>
-            <button class="menu-item" id="student-nav-btn" role="menuitem" onclick="openStudentLogin()">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path></svg>
-              Student Portal
-            </button>
-            <button class="menu-item" id="all-sections-nav-btn" role="menuitem" onclick="viewAllSections()">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-              All Sections
-            </button>
-            <button class="menu-item" id="teacher-nav-btn" role="menuitem" onclick="openTeacherLogin()">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-              Teacher Portal
-            </button>
-            <button class="menu-item" id="admin-nav-btn" role="menuitem" onclick="openAdminModal()">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-              Admin Portal
-            </button>
+            <button class="menu-item" id="home-nav-btn" role="menuitem" onclick="setView('home-view')">Home</button>
+            <button class="menu-item" id="student-nav-btn" role="menuitem" onclick="openStudentLogin()">Student Portal</button>
+            <button class="menu-item" id="all-sections-nav-btn" role="menuitem" onclick="viewAllSections()">All Sections</button>
+            <button class="menu-item" id="teacher-nav-btn" role="menuitem" onclick="openTeacherLogin()">Teacher Portal</button>
+            <button class="menu-item" id="admin-nav-btn" role="menuitem" onclick="openAdminModal()">Admin Portal</button>
             <hr class="menu-divider">
-            <button class="menu-item" id="report-nav-btn" role="menuitem" onclick="openReportModal()">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-              Report Room Conflict
-            </button>
-            <hr class="menu-divider">
-            <button class="menu-item" id="theme-toggle-btn" role="menuitem" onclick="toggleTheme()">☀️ Light Mode</button>
+            <button class="menu-item" id="notif-nav-btn" role="menuitem" onclick="openNotificationCenter()">Notifications</button>
+            <button class="menu-item" id="report-nav-btn" role="menuitem" onclick="openReportModal()">Report an Issue</button>
+            <button class="menu-item" id="theme-toggle-btn" role="menuitem" onclick="toggleTheme()">Light Mode</button>
+            <hr class="menu-divider" id="logout-divider" style="display:none;">
+            <button class="menu-item danger" id="context-logout-btn" role="menuitem" style="display:none;">Logout</button>
           </div>
         </div>
       </div>
@@ -68,20 +53,12 @@
       <div class="hero-container">
         <h1 class="hero-title">Class Schedule Management System</h1>
         <p class="hero-subtitle">Your centralized hub for tracking real-time academic schedules, classroom locations, and automated alerts.</p>
-
         <div class="portal-choices">
-          <button class="choice-card-btn" onclick="openStudentLogin()">
-            🎓 Student Portal
-          </button>
-          <button class="choice-card-btn secondary" onclick="openTeacherLogin()">
-            👨‍🏫 Teacher Portal
-          </button>
-          <button class="choice-card-btn admin" onclick="openAdminModal()">
-            ⚙️ Admin Portal
-          </button>
+          <button class="choice-card-btn" onclick="openStudentLogin()">Student Portal</button>
+          <button class="choice-card-btn secondary" onclick="openTeacherLogin()">Teacher Portal</button>
+          <button class="choice-card-btn admin" onclick="openAdminModal()">Admin Portal</button>
         </div>
       </div>
-
       <div class="about-section">
         <h2>About Our System</h2>
         <p>Welcome to the official Class Schedule Portal. This platform is engineered to simplify and streamline academic schedule management for students, faculty members, and administrative staff in real time.</p>
@@ -97,50 +74,71 @@
         <form onsubmit="event.preventDefault(); submitStudentLogin();" class="auth-form">
           <div>
             <label for="student-section-input">Section Code:</label>
-            <input type="text" id="student-section-input" placeholder="e.g. BS5EA, BS5MA" required>
+            <input type="text" id="student-section-input" placeholder="e.g. BSIT 1A, BSCS 2B" required>
           </div>
           <button type="submit" class="auth-btn">Enter Portal</button>
         </form>
       </div>
 
       <div id="student-main-content" style="display:none;">
-        <div id="next-class-container"></div>
 
-        <div class="portal-status-bar">
-          <span id="active-student-section-badge" style="background:var(--primary); color:#fff; padding:6px 14px; border-radius:var(--radius-pill); font-weight:700; font-size:0.85rem;">Section: --</span>
-          <div class="status-actions">
-            <button class="enable-alerts-btn notify-btn" id="student-notify-btn" onclick="enablePhoneAlerts()">Enable Phone Alerts</button>
-            <button class="btn-secondary" onclick="logoutStudent()">Switch Section</button>
+        <!-- HOME SUB-PANEL -->
+        <div id="student-panel-home" class="student-subpanel">
+          <div id="student-announcements-container"></div>
+          <div id="next-class-container"></div>
+          <div style="margin: 18px 0 10px;">
+            <h3 style="font-size:1.05rem; font-weight:800;">Today's Classes</h3>
           </div>
+          <div id="student-today-list"></div>
         </div>
 
-        <div class="schedule-header">
-          <div>
-            <h1 class="schedule-title">BS CLASS SCHEDULES</h1>
-            <div class="schedule-subtitle">1ST SEM 2026-2027</div>
-          </div>
-          <div class="chrome-search-container">
-            <div class="chrome-search-box" id="chrome-search-box">
-              <div class="chrome-input-wrapper">
-                <svg class="chrome-search-icon" viewBox="0 0 24 24">
-                  <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
-                </svg>
-                <input type="text" id="student-search-input" class="chrome-search-input" placeholder="Search section, subject, professor, or room" autocomplete="off">
-              </div>
-              <div class="chrome-dropdown" id="chrome-dropdown"></div>
+        <!-- SECTION SUB-PANEL (full schedule) -->
+        <div id="student-panel-section" class="student-subpanel" style="display:none;">
+          <div class="portal-status-bar">
+            <span id="active-student-section-badge" style="background:var(--primary); color:#fff; padding:6px 14px; border-radius:var(--radius-pill); font-weight:700; font-size:0.85rem;">Section: --</span>
+            <div class="status-actions">
+              <button class="enable-alerts-btn notify-btn" id="student-notify-btn" onclick="enablePhoneAlerts()">Enable Phone Alerts</button>
+              <button class="btn-secondary" onclick="logoutStudent()">Switch Section</button>
             </div>
           </div>
+          <div class="schedule-header">
+            <div>
+              <h1 class="schedule-title">BS CLASS SCHEDULES</h1>
+              <div class="schedule-subtitle">1ST SEM 2026-2027</div>
+            </div>
+            <div class="chrome-search-container">
+              <div class="chrome-search-box" id="chrome-search-box">
+                <div class="chrome-input-wrapper">
+                  <svg class="chrome-search-icon" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                  <input type="text" id="student-search-input" class="chrome-search-input" placeholder="Search section, subject, professor, or room" autocomplete="off">
+                </div>
+                <div class="chrome-dropdown" id="chrome-dropdown"></div>
+              </div>
+            </div>
+          </div>
+          <div class="session-bar-wrapper">
+            <div class="session-filter-bar" id="session-filter-buttons">
+              <button class="session-filter-btn active" data-session="MORNING">Morning Session</button>
+              <button class="session-filter-btn" data-session="AFTERNOON">Afternoon Session</button>
+              <button class="session-filter-btn" data-session="EVENING">Evening Session</button>
+            </div>
+          </div>
+          <div id="sections-container" class="sections-list"></div>
         </div>
 
-        <div class="session-bar-wrapper">
-          <div class="session-filter-bar" id="session-filter-buttons">
-            <button class="session-filter-btn active" data-session="MORNING">Morning Session</button>
-            <button class="session-filter-btn" data-session="AFTERNOON">Afternoon Session</button>
-            <button class="session-filter-btn" data-session="EVENING">Evening Session</button>
+        <!-- PROFILE SUB-PANEL -->
+        <div id="student-panel-profile" class="student-subpanel" style="display:none;">
+          <div class="about-section">
+            <h2>👤 Profile</h2>
+            <div class="profile-row"><span>Section</span><strong id="profile-section-value">--</strong></div>
+            <div class="profile-row"><span>Phone Alerts</span><strong id="profile-alerts-value">--</strong></div>
+            <div style="display:flex; gap:10px; margin-top:18px;">
+              <button class="enable-alerts-btn notify-btn" id="profile-notify-btn" onclick="enablePhoneAlerts()" style="flex:1;">Enable Phone Alerts</button>
+            </div>
+            <button class="btn-danger" style="width:100%; margin-top:10px;" onclick="logoutStudent()">Logout</button>
           </div>
         </div>
 
-        <div id="sections-container" class="sections-list"></div>
       </div>
     </section>
 
@@ -152,17 +150,14 @@
         <form onsubmit="event.preventDefault(); submitTeacherLogin();" class="auth-form">
           <div>
             <label for="teacher-name-select-gate">Faculty Name:</label>
-            <select id="teacher-name-select-gate" required>
-              <option value="">-- Select Your Name --</option>
-            </select>
+            <select id="teacher-name-select-gate" required><option value="">-- Select Your Name --</option></select>
           </div>
           <button type="submit" class="auth-btn">Access Schedule</button>
         </form>
       </div>
-
       <div id="teacher-main-content" style="display:none;">
+        <div id="teacher-announcements-container"></div>
         <div id="teacher-next-class-container"></div>
-
         <div class="portal-status-bar">
           <span id="active-teacher-badge" style="background:var(--success); color:#fff; padding:6px 14px; border-radius:var(--radius-pill); font-weight:700; font-size:0.85rem;">Faculty: --</span>
           <div class="status-actions">
@@ -170,14 +165,9 @@
             <button class="btn-secondary" onclick="logoutTeacher()">Switch Profile</button>
           </div>
         </div>
-
         <div class="schedule-header">
-          <div>
-            <h1 class="schedule-title">FACULTY PORTAL</h1>
-            <div class="schedule-subtitle">Assigned class schedules</div>
-          </div>
+          <div><h1 class="schedule-title">FACULTY PORTAL</h1><div class="schedule-subtitle">Assigned class schedules</div></div>
         </div>
-
         <div id="teacher-schedule-container" class="sections-list"></div>
       </div>
     </section>
@@ -188,10 +178,7 @@
         <h2>Admin Portal Access</h2>
         <p>Enter your administrative security code to modify section layouts and schedule allocations.</p>
         <form onsubmit="event.preventDefault(); submitAdminViewLogin();" class="auth-form">
-          <div>
-            <label for="admin-view-pass-input">Passcode:</label>
-            <input type="password" id="admin-view-pass-input" placeholder="Enter Admin Passcode" required>
-          </div>
+          <div><label for="admin-view-pass-input">Passcode:</label><input type="password" id="admin-view-pass-input" placeholder="Enter Admin Passcode" required></div>
           <button type="submit" class="auth-btn btn-danger" style="background: var(--danger);">Access Admin Panel</button>
         </form>
       </div>
@@ -199,140 +186,221 @@
       <div id="admin-main-content" style="display:none;">
         <div class="portal-status-bar">
           <span style="background:var(--danger); color:#fff; padding:6px 14px; border-radius:var(--radius-pill); font-weight:700; font-size:0.85rem;">Mode: Administrator</span>
-          <div class="status-actions">
-            <button class="btn-secondary" onclick="logoutAdmin()">Exit Admin</button>
-          </div>
+          <div class="status-actions"><button class="btn-secondary" onclick="logoutAdmin()">Exit Admin</button></div>
         </div>
 
-        <div class="schedule-header" style="margin-bottom:20px;">
-          <div>
-            <h1 class="schedule-title">ADMIN MANAGEMENT</h1>
-            <div class="schedule-subtitle">Add or edit class sections and schedule allocations</div>
-          </div>
+        <!-- DASHBOARD -->
+        <div class="schedule-header" style="margin-bottom:16px;">
+          <div><h1 class="schedule-title">ADMIN DASHBOARD</h1><div class="schedule-subtitle">System overview and quick actions</div></div>
         </div>
 
-        <div class="add-section-card">
-          <h3>➕ Add New Section</h3>
-          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:16px; margin: 16px 0;">
-            <div>
-              <label for="new-section-code">Section Code:</label>
-              <input type="text" id="new-section-code" placeholder="e.g. BSIT 3A">
-            </div>
-            <div>
-              <label for="new-section-title">Title / Label:</label>
-              <input type="text" id="new-section-title" placeholder="e.g. BSIT 3A - Morning">
-            </div>
-            <div>
-              <label for="new-section-session">Session:</label>
-              <select id="new-section-session">
-                <option value="MORNING">MORNING</option>
-                <option value="AFTERNOON">AFTERNOON</option>
-                <option value="EVENING">EVENING</option>
-              </select>
-            </div>
-          </div>
-          <button class="btn-primary" onclick="addNewSection()">Create Section</button>
+        <div id="admin-summary-cards" class="summary-grid"></div>
+
+        <div class="quick-actions-grid">
+          <button class="quick-action-btn" onclick="openAddSectionModal()">Add Schedule</button>
+          <button class="quick-action-btn" onclick="openRoomAvailabilityModal()">Check Room Availability</button>
+          <button class="quick-action-btn" onclick="openAnnouncementModal()">Create Announcement</button>
+          <button class="quick-action-btn" onclick="openManageTeachersModal()">Manage Teachers</button>
+          <button class="quick-action-btn" onclick="openManageSubjectsModal()">Manage Subjects</button>
         </div>
 
-        <div style="margin-bottom:16px;">
-          <h3 style="font-size:1.2rem; font-weight:800;">📋 Existing Sections</h3>
+        <div style="margin: 24px 0 12px;"><h3 style="font-size:1.1rem; font-weight:800;">Today's Schedule Overview</h3></div>
+        <div id="admin-today-overview"></div>
+
+        <div style="margin: 24px 0 12px;"><h3 style="font-size:1.1rem; font-weight:800;">Recent Activities</h3></div>
+        <div id="admin-recent-activities"></div>
+
+        <!-- SECTIONS LIST -->
+        <div class="schedule-header" style="margin: 28px 0 12px;">
+          <div><h1 class="schedule-title" style="font-size:1.2rem;">SECTIONS</h1></div>
+          <div class="chrome-search-container">
+            <div class="chrome-search-box">
+              <div class="chrome-input-wrapper">
+                <svg class="chrome-search-icon" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                <input type="text" id="admin-section-search-input" class="chrome-search-input" placeholder="Search sections..." autocomplete="off">
+              </div>
+            </div>
+          </div>
         </div>
         <div id="admin-sections-list"></div>
 
-        <div style="margin: 28px 0 16px;">
-          <h3 style="font-size:1.2rem; font-weight:800;">📢 Room Conflict Reports</h3>
+        <!-- ANNOUNCEMENTS -->
+        <div class="schedule-header" style="margin: 28px 0 12px;">
+          <div><h1 class="schedule-title" style="font-size:1.2rem;">ANNOUNCEMENTS</h1></div>
+          <button class="btn-primary" onclick="openAnnouncementModal()">Create Announcement</button>
+        </div>
+        <div id="admin-announcements-list"></div>
+
+        <!-- REPORTS -->
+        <div class="schedule-header" style="margin: 28px 0 12px;">
+          <div><h1 class="schedule-title" style="font-size:1.2rem;">STUDENT REPORTS</h1></div>
         </div>
         <div id="admin-reports-list"></div>
       </div>
     </section>
   </main>
 
-  <!-- Bottom Tab Bar -->
-  <nav class="bottom-nav" aria-label="Bottom Navigation">
-    <button class="bottom-nav-item" id="bn-home" onclick="setView('home-view')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
-      Home
-    </button>
-    <button class="bottom-nav-item" id="bn-student" onclick="openStudentLogin()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path></svg>
-      Student
-    </button>
-    <button class="bottom-nav-item" id="bn-teacher" onclick="openTeacherLogin()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-      Teacher
-    </button>
-    <button class="bottom-nav-item" id="bn-admin" onclick="openAdminModal()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-      Admin
-    </button>
-  </nav>
+  <!-- CONTEXTUAL BOTTOM NAV -->
+  <div id="bottom-nav-container"></div>
 
   <!-- Subject Details Modal -->
   <div class="overlay" id="subject-details-overlay" aria-hidden="true">
-    <div class="details-card-modal" role="dialog" aria-modal="true" aria-labelledby="subject-card-code">
+    <div class="details-card-modal" role="dialog" aria-modal="true">
       <div class="details-card-header" id="subject-card-time">Monday · 7:00 - 8:00</div>
       <div style="display: flex; flex-direction: column; gap: 12px;">
-        <div class="details-card-group">
-          <div class="details-card-label" style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Subject Code</div>
-          <div class="details-card-value bold" id="subject-card-code" style="font-size:1.1rem; font-weight:800;">CC112</div>
-        </div>
-        <div class="details-card-group">
-          <div class="details-card-label" style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Subject Name</div>
-          <div class="details-card-value" id="subject-card-name" style="font-weight:600;">—</div>
-        </div>
-        <div class="details-card-group">
-          <div class="details-card-label" style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Classroom</div>
-          <div class="details-card-value" id="subject-card-room" style="font-weight:600;">CL1</div>
-        </div>
-        <div class="details-card-group">
-          <div class="details-card-label" style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Professor</div>
-          <div class="details-card-value" id="subject-card-professor" style="font-weight:600;">X.Plata</div>
-        </div>
+        <div class="details-card-group"><div class="details-card-label">Subject Code</div><div class="details-card-value bold" id="subject-card-code">CC112</div></div>
+        <div class="details-card-group"><div class="details-card-label">Subject Name</div><div class="details-card-value" id="subject-card-name">—</div></div>
+        <div class="details-card-group"><div class="details-card-label">Classroom</div><div class="details-card-value" id="subject-card-room">CL1</div></div>
+        <div class="details-card-group"><div class="details-card-label">Professor</div><div class="details-card-value" id="subject-card-professor">X.Plata</div></div>
       </div>
-      <div class="details-card-actions">
-        <button class="details-close-btn" id="subject-card-close-btn" onclick="document.getElementById('subject-details-overlay').classList.remove('open')">Close</button>
-      </div>
+      <div class="details-card-actions"><button class="details-close-btn" onclick="document.getElementById('subject-details-overlay').classList.remove('open')">Close</button></div>
     </div>
   </div>
 
-  <!-- Room Conflict Report Modal -->
+  <!-- Room Conflict Report Modal (student "Report an Issue") -->
   <div class="overlay" id="report-modal-overlay" aria-hidden="true">
     <div class="modal" role="dialog" aria-modal="true">
-      <h3 style="margin-top:0; font-size:1.25rem; font-weight:800;">⚠️ Report Room Conflict</h3>
-      <p style="font-size:0.875rem; color:var(--text-muted); margin-bottom:20px;">Let admin know if your assigned room is being used by another class.</p>
+      <h3 style="margin-top:0; font-size:1.25rem; font-weight:800;">Report an Issue</h3>
+      <p style="font-size:0.875rem; color:var(--text-muted); margin-bottom:20px;">Let admin know about a schedule, room, or teacher problem.</p>
       <form onsubmit="event.preventDefault(); submitRoomReport();" class="auth-form">
-        <div>
-          <label for="report-section-input">Section Code:</label>
-          <input type="text" id="report-section-input" placeholder="e.g. BS5EA">
+        <div><label for="report-section-input">Section Code:</label><input type="text" id="report-section-input" placeholder="e.g. BS5EA"></div>
+        <div><label for="report-issue-type">Issue Type:</label>
+          <select id="report-issue-type">
+            <option value="Wrong Room">Wrong Room</option>
+            <option value="Wrong Schedule">Wrong Schedule</option>
+            <option value="Wrong Teacher">Wrong Teacher</option>
+            <option value="Missing Class">Missing Class</option>
+            <option value="Other">Other</option>
+          </select>
         </div>
-        <div>
-          <label for="report-room-input">Room:</label>
-          <input type="text" id="report-room-input" placeholder="e.g. CL1" required>
-        </div>
-        <div>
-          <label for="report-day-select">Day:</label>
-          <select id="report-day-select" required>
+        <div><label for="report-room-input">Room:</label><input type="text" id="report-room-input" placeholder="e.g. CL1"></div>
+        <div><label for="report-day-select">Day:</label>
+          <select id="report-day-select">
             <option value="">-- Select Day --</option>
-            <option value="Monday">Monday</option>
-            <option value="Tuesday">Tuesday</option>
-            <option value="Wednesday">Wednesday</option>
-            <option value="Thursday">Thursday</option>
+            <option value="Monday">Monday</option><option value="Tuesday">Tuesday</option>
+            <option value="Wednesday">Wednesday</option><option value="Thursday">Thursday</option>
             <option value="Friday ODL">Friday ODL</option>
           </select>
         </div>
-        <div>
-          <label for="report-slot-input">Time Slot:</label>
-          <input type="text" id="report-slot-input" placeholder="e.g. 2:00 PM - 3:00 PM" required>
-        </div>
-        <div>
-          <label for="report-details-input">Details:</label>
-          <textarea id="report-details-input" rows="3" placeholder="Describe the issue..."></textarea>
-        </div>
+        <div><label for="report-slot-input">Time Slot:</label><input type="text" id="report-slot-input" placeholder="e.g. 2:00 PM - 3:00 PM"></div>
+        <div><label for="report-details-input">Details:</label><textarea id="report-details-input" rows="3" placeholder="Describe the issue..." required></textarea></div>
         <div style="display:flex; gap:10px;">
           <button type="submit" class="btn-primary" style="flex:1;">Submit Report</button>
           <button type="button" class="btn-secondary" onclick="closeReportModal()" style="flex:1;">Cancel</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Notification Center -->
+  <div class="overlay" id="notif-center-overlay" aria-hidden="true">
+    <div class="modal notif-center-modal" role="dialog" aria-modal="true">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <h3 style="margin:0; font-size:1.25rem; font-weight:800;">Notifications</h3>
+        <button class="btn-secondary" style="padding:6px 12px; font-size:0.8rem;" onclick="markAllNotificationsRead()">Mark all read</button>
+      </div>
+      <div id="notif-center-list" class="notif-list"></div>
+      <div style="margin-top:16px;"><button class="details-close-btn" onclick="closeNotificationCenter()">Close</button></div>
+    </div>
+  </div>
+
+  <!-- Add Section Modal -->
+  <div class="overlay" id="add-section-modal-overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true">
+      <h3 style="margin-top:0; font-size:1.25rem; font-weight:800;">➕ Add Section</h3>
+      <div class="auth-form">
+        <div><label for="new-section-code">Section Code:</label><input type="text" id="new-section-code" placeholder="e.g. BSIT 3A"></div>
+        <div><label for="new-section-title">Section Name:</label><input type="text" id="new-section-title" placeholder="e.g. BSIT 3A - Morning"></div>
+        <div><label for="new-section-session">Schedule Period:</label>
+          <select id="new-section-session">
+            <option value="MORNING">Morning</option>
+            <option value="AFTERNOON">Afternoon</option>
+            <option value="EVENING">Evening</option>
+          </select>
+        </div>
+        <div style="display:flex; gap:10px;">
+          <button class="btn-primary" style="flex:1;" onclick="addNewSection()">Save Section</button>
+          <button class="btn-secondary" style="flex:1;" onclick="closeAddSectionModal()">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Announcement Modal -->
+  <div class="overlay" id="announcement-modal-overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true">
+      <h3 style="margin-top:0; font-size:1.25rem; font-weight:800;">Create Announcement</h3>
+      <div class="auth-form">
+        <div><label for="ann-title">Title:</label><input type="text" id="ann-title" placeholder="e.g. Class Suspension Due to Heavy Rain"></div>
+        <div><label for="ann-content">Message:</label><textarea id="ann-content" rows="3" placeholder="Announcement details..."></textarea></div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div><label for="ann-type">Type:</label>
+            <select id="ann-type">
+              <option value="general">General</option><option value="no_class">No Classes</option>
+              <option value="holiday">Holiday</option><option value="suspension">Class Suspension</option>
+            </select>
+          </div>
+          <div><label for="ann-priority">Priority:</label>
+            <select id="ann-priority">
+              <option value="normal">Normal</option><option value="important">Important</option><option value="urgent">Urgent</option>
+            </select>
+          </div>
+        </div>
+        <div><label for="ann-target-type">Target Audience:</label>
+          <select id="ann-target-type" onchange="toggleAnnTargetValue()">
+            <option value="all">Everyone</option><option value="section">Specific Section</option><option value="teacher">Specific Teacher</option>
+          </select>
+        </div>
+        <div id="ann-target-value-wrapper" style="display:none;"><label for="ann-target-value">Target:</label><input type="text" id="ann-target-value" placeholder="e.g. BS5EA or J.Muyot"></div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div><label for="ann-start-date">Start Date:</label><input type="date" id="ann-start-date"></div>
+          <div><label for="ann-end-date">End Date (optional):</label><input type="date" id="ann-end-date"></div>
+        </div>
+        <div style="display:flex; gap:10px;">
+          <button class="btn-primary" style="flex:1;" onclick="submitAnnouncement()">Post Announcement</button>
+          <button class="btn-secondary" style="flex:1;" onclick="closeAnnouncementModal()">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Room Availability Modal -->
+  <div class="overlay" id="room-avail-modal-overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true">
+      <h3 style="margin-top:0; font-size:1.25rem; font-weight:800;">Room Availability Checker</h3>
+      <div class="auth-form">
+        <div><label for="avail-day">Day:</label>
+          <select id="avail-day">
+            <option value="0">Monday</option><option value="1">Tuesday</option><option value="2">Wednesday</option>
+            <option value="3">Thursday</option><option value="4">Friday ODL</option>
+          </select>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div><label for="avail-start">Start Time:</label><input type="time" id="avail-start" value="09:00"></div>
+          <div><label for="avail-end">End Time:</label><input type="time" id="avail-end" value="10:00"></div>
+        </div>
+        <button class="btn-primary" onclick="checkRoomAvailability()">Check Availability</button>
+        <div id="room-avail-results" style="margin-top:14px;"></div>
+        <button class="btn-secondary" onclick="closeRoomAvailabilityModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Manage Teachers Modal (read-only summary) -->
+  <div class="overlay" id="manage-teachers-modal-overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true">
+      <h3 style="margin-top:0; font-size:1.25rem; font-weight:800;">Teachers</h3>
+      <div id="manage-teachers-list" style="max-height:50vh; overflow-y:auto;"></div>
+      <button class="details-close-btn" onclick="document.getElementById('manage-teachers-modal-overlay').classList.remove('open')">Close</button>
+    </div>
+  </div>
+
+  <!-- Manage Subjects Modal (read-only summary) -->
+  <div class="overlay" id="manage-subjects-modal-overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true">
+      <h3 style="margin-top:0; font-size:1.25rem; font-weight:800;">Subjects</h3>
+      <div id="manage-subjects-list" style="max-height:50vh; overflow-y:auto;"></div>
+      <button class="details-close-btn" onclick="document.getElementById('manage-subjects-modal-overlay').classList.remove('open')">Close</button>
     </div>
   </div>
 
