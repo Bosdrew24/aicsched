@@ -30,17 +30,17 @@
             <span class="bar"></span><span class="bar"></span><span class="bar"></span>
           </button>
           <div class="hamburger-menu" id="hamburger-menu" role="menu">
-            <button class="menu-item" id="home-nav-btn" role="menuitem" onclick="setView('home-view')">Home</button>
-            <button class="menu-item" id="student-nav-btn" role="menuitem" onclick="openStudentLogin()">Student Portal</button>
-            <button class="menu-item" id="all-sections-nav-btn" role="menuitem" onclick="viewAllSections()">All Sections</button>
-            <button class="menu-item" id="teacher-nav-btn" role="menuitem" onclick="openTeacherLogin()">Teacher Portal</button>
-            <button class="menu-item" id="admin-nav-btn" role="menuitem" onclick="openAdminModal()">Admin Portal</button>
-            <hr class="menu-divider">
-            <button class="menu-item" id="notif-nav-btn" role="menuitem" onclick="openNotificationCenter()">Notifications</button>
-            <button class="menu-item" id="report-nav-btn" role="menuitem" onclick="openReportModal()">Report an Issue</button>
-            <button class="menu-item" id="theme-toggle-btn" role="menuitem" onclick="toggleTheme()">Light Mode</button>
+            <button class="menu-item portal-switch-item" id="home-nav-btn" role="menuitem" onclick="setView('home-view')">🏠 Home</button>
+            <button class="menu-item portal-switch-item" id="student-nav-btn" role="menuitem" onclick="openStudentLogin()">🎓 Student Portal</button>
+            <button class="menu-item portal-switch-item" id="all-sections-nav-btn" role="menuitem" onclick="viewAllSections()">🗂️ All Sections</button>
+            <button class="menu-item portal-switch-item" id="teacher-nav-btn" role="menuitem" onclick="openTeacherLogin()">👨‍🏫 Teacher Portal</button>
+            <button class="menu-item portal-switch-item" id="admin-nav-btn" role="menuitem" onclick="openAdminModal()">⚙️ Admin Portal</button>
+            <hr class="menu-divider portal-switch-item">
+            <button class="menu-item" id="notif-nav-btn" role="menuitem" onclick="openNotificationCenter()">🔔 Notifications</button>
+            <button class="menu-item context-issue-item" id="report-nav-btn" role="menuitem" onclick="openReportModal()">🚩 Report an Issue</button>
+            <button class="menu-item" id="theme-toggle-btn" role="menuitem" onclick="toggleTheme()">☀️ Light Mode</button>
             <hr class="menu-divider" id="logout-divider" style="display:none;">
-            <button class="menu-item danger" id="context-logout-btn" role="menuitem" style="display:none;">Logout</button>
+            <button class="menu-item danger" id="context-logout-btn" role="menuitem" style="display:none;">🚪 Logout</button>
           </div>
         </div>
       </div>
@@ -54,9 +54,9 @@
         <h1 class="hero-title">Class Schedule Management System</h1>
         <p class="hero-subtitle">Your centralized hub for tracking real-time academic schedules, classroom locations, and automated alerts.</p>
         <div class="portal-choices">
-          <button class="choice-card-btn" onclick="openStudentLogin()">Student Portal</button>
-          <button class="choice-card-btn secondary" onclick="openTeacherLogin()">Teacher Portal</button>
-          <button class="choice-card-btn admin" onclick="openAdminModal()">Admin Portal</button>
+          <button class="choice-card-btn" onclick="openStudentLogin()">🎓 Student Portal</button>
+          <button class="choice-card-btn secondary" onclick="openTeacherLogin()">👨‍🏫 Teacher Portal</button>
+          <button class="choice-card-btn admin" onclick="openAdminModal()">⚙️ Admin Portal</button>
         </div>
       </div>
       <div class="about-section">
@@ -72,27 +72,19 @@
         <h2>Student Portal Access</h2>
         <p>Enter your section code to access your tailored class schedule.</p>
         <form onsubmit="event.preventDefault(); submitStudentLogin();" class="auth-form">
-          <div>
-            <label for="student-section-input">Section Code:</label>
-            <input type="text" id="student-section-input" placeholder="e.g. BSIT 1A, BSCS 2B" required>
-          </div>
+          <div><label for="student-section-input">Section Code:</label><input type="text" id="student-section-input" placeholder="e.g. BSIT 1A, BSCS 2B" required></div>
           <button type="submit" class="auth-btn">Enter Portal</button>
         </form>
       </div>
 
       <div id="student-main-content" style="display:none;">
-
-        <!-- HOME SUB-PANEL -->
         <div id="student-panel-home" class="student-subpanel">
           <div id="student-announcements-container"></div>
           <div id="next-class-container"></div>
-          <div style="margin: 18px 0 10px;">
-            <h3 style="font-size:1.05rem; font-weight:800;">Today's Classes</h3>
-          </div>
+          <div style="margin: 18px 0 10px;"><h3 style="font-size:1.05rem; font-weight:800;">📅 Today's Classes</h3></div>
           <div id="student-today-list"></div>
         </div>
 
-        <!-- SECTION SUB-PANEL (full schedule) -->
         <div id="student-panel-section" class="student-subpanel" style="display:none;">
           <div class="portal-status-bar">
             <span id="active-student-section-badge" style="background:var(--primary); color:#fff; padding:6px 14px; border-radius:var(--radius-pill); font-weight:700; font-size:0.85rem;">Section: --</span>
@@ -102,10 +94,7 @@
             </div>
           </div>
           <div class="schedule-header">
-            <div>
-              <h1 class="schedule-title">BS CLASS SCHEDULES</h1>
-              <div class="schedule-subtitle">1ST SEM 2026-2027</div>
-            </div>
+            <div><h1 class="schedule-title">BS CLASS SCHEDULES</h1><div class="schedule-subtitle">1ST SEM 2026-2027</div></div>
             <div class="chrome-search-container">
               <div class="chrome-search-box" id="chrome-search-box">
                 <div class="chrome-input-wrapper">
@@ -126,7 +115,6 @@
           <div id="sections-container" class="sections-list"></div>
         </div>
 
-        <!-- PROFILE SUB-PANEL -->
         <div id="student-panel-profile" class="student-subpanel" style="display:none;">
           <div class="about-section">
             <h2>👤 Profile</h2>
@@ -135,10 +123,9 @@
             <div style="display:flex; gap:10px; margin-top:18px;">
               <button class="enable-alerts-btn notify-btn" id="profile-notify-btn" onclick="enablePhoneAlerts()" style="flex:1;">Enable Phone Alerts</button>
             </div>
-            <button class="btn-danger" style="width:100%; margin-top:10px;" onclick="logoutStudent()">Logout</button>
+            <button class="btn-danger" style="width:100%; margin-top:10px;" onclick="logoutStudent()">🚪 Logout</button>
           </div>
         </div>
-
       </div>
     </section>
 
@@ -148,8 +135,7 @@
         <h2>Faculty Portal Access</h2>
         <p>Select your faculty profile to access your weekly teaching timetable.</p>
         <form onsubmit="event.preventDefault(); submitTeacherLogin();" class="auth-form">
-          <div>
-            <label for="teacher-name-select-gate">Faculty Name:</label>
+          <div><label for="teacher-name-select-gate">Faculty Name:</label>
             <select id="teacher-name-select-gate" required><option value="">-- Select Your Name --</option></select>
           </div>
           <button type="submit" class="auth-btn">Access Schedule</button>
@@ -165,9 +151,7 @@
             <button class="btn-secondary" onclick="logoutTeacher()">Switch Profile</button>
           </div>
         </div>
-        <div class="schedule-header">
-          <div><h1 class="schedule-title">FACULTY PORTAL</h1><div class="schedule-subtitle">Assigned class schedules</div></div>
-        </div>
+        <div class="schedule-header"><div><h1 class="schedule-title">FACULTY PORTAL</h1><div class="schedule-subtitle">Assigned class schedules</div></div></div>
         <div id="teacher-schedule-container" class="sections-list"></div>
       </div>
     </section>
@@ -189,30 +173,30 @@
           <div class="status-actions"><button class="btn-secondary" onclick="logoutAdmin()">Exit Admin</button></div>
         </div>
 
-        <!-- DASHBOARD -->
         <div class="schedule-header" style="margin-bottom:16px;">
           <div><h1 class="schedule-title">ADMIN DASHBOARD</h1><div class="schedule-subtitle">System overview and quick actions</div></div>
         </div>
 
         <div id="admin-summary-cards" class="summary-grid"></div>
 
+        <div id="admin-conflict-warning" style="display:none; margin-bottom:14px;"></div>
+
         <div class="quick-actions-grid">
-          <button class="quick-action-btn" onclick="openAddSectionModal()">Add Schedule</button>
-          <button class="quick-action-btn" onclick="openRoomAvailabilityModal()">Check Room Availability</button>
-          <button class="quick-action-btn" onclick="openAnnouncementModal()">Create Announcement</button>
-          <button class="quick-action-btn" onclick="openManageTeachersModal()">Manage Teachers</button>
-          <button class="quick-action-btn" onclick="openManageSubjectsModal()">Manage Subjects</button>
+          <button class="quick-action-btn" onclick="openAddSectionModal()">➕ Add Schedule</button>
+          <button class="quick-action-btn" onclick="openRoomAvailabilityModal()">🏫 Check Room Availability</button>
+          <button class="quick-action-btn" onclick="openAnnouncementModal()">📢 Create Announcement</button>
+          <button class="quick-action-btn" onclick="openManageTeachersModal()">👨‍🏫 Manage Teachers</button>
+          <button class="quick-action-btn" onclick="openManageSubjectsModal()">📚 Manage Subjects</button>
         </div>
 
-        <div style="margin: 24px 0 12px;"><h3 style="font-size:1.1rem; font-weight:800;">Today's Schedule Overview</h3></div>
+        <div style="margin: 24px 0 12px;"><h3 style="font-size:1.1rem; font-weight:800;">📅 Today's Schedule Overview</h3></div>
         <div id="admin-today-overview"></div>
 
-        <div style="margin: 24px 0 12px;"><h3 style="font-size:1.1rem; font-weight:800;">Recent Activities</h3></div>
+        <div style="margin: 24px 0 12px;"><h3 style="font-size:1.1rem; font-weight:800;">🕒 Recent Activities</h3></div>
         <div id="admin-recent-activities"></div>
 
-        <!-- SECTIONS LIST -->
         <div class="schedule-header" style="margin: 28px 0 12px;">
-          <div><h1 class="schedule-title" style="font-size:1.2rem;">SECTIONS</h1></div>
+          <div><h1 class="schedule-title" style="font-size:1.2rem;">📋 SECTIONS</h1></div>
           <div class="chrome-search-container">
             <div class="chrome-search-box">
               <div class="chrome-input-wrapper">
@@ -224,23 +208,20 @@
         </div>
         <div id="admin-sections-list"></div>
 
-        <!-- ANNOUNCEMENTS -->
         <div class="schedule-header" style="margin: 28px 0 12px;">
-          <div><h1 class="schedule-title" style="font-size:1.2rem;">ANNOUNCEMENTS</h1></div>
-          <button class="btn-primary" onclick="openAnnouncementModal()">Create Announcement</button>
+          <div><h1 class="schedule-title" style="font-size:1.2rem;">📢 ANNOUNCEMENTS</h1></div>
+          <button class="btn-primary" onclick="openAnnouncementModal()">📢 Create Announcement</button>
         </div>
         <div id="admin-announcements-list"></div>
 
-        <!-- REPORTS -->
         <div class="schedule-header" style="margin: 28px 0 12px;">
-          <div><h1 class="schedule-title" style="font-size:1.2rem;">STUDENT REPORTS</h1></div>
+          <div><h1 class="schedule-title" style="font-size:1.2rem;">🚩 STUDENT REPORTS</h1></div>
         </div>
         <div id="admin-reports-list"></div>
       </div>
     </section>
   </main>
 
-  <!-- CONTEXTUAL BOTTOM NAV -->
   <div id="bottom-nav-container"></div>
 
   <!-- Subject Details Modal -->
@@ -257,19 +238,17 @@
     </div>
   </div>
 
-  <!-- Room Conflict Report Modal (student "Report an Issue") -->
+  <!-- Report an Issue Modal -->
   <div class="overlay" id="report-modal-overlay" aria-hidden="true">
     <div class="modal" role="dialog" aria-modal="true">
-      <h3 style="margin-top:0; font-size:1.25rem; font-weight:800;">Report an Issue</h3>
+      <h3 style="margin-top:0; font-size:1.25rem; font-weight:800;">🚩 Report an Issue</h3>
       <p style="font-size:0.875rem; color:var(--text-muted); margin-bottom:20px;">Let admin know about a schedule, room, or teacher problem.</p>
       <form onsubmit="event.preventDefault(); submitRoomReport();" class="auth-form">
         <div><label for="report-section-input">Section Code:</label><input type="text" id="report-section-input" placeholder="e.g. BS5EA"></div>
         <div><label for="report-issue-type">Issue Type:</label>
           <select id="report-issue-type">
-            <option value="Wrong Room">Wrong Room</option>
-            <option value="Wrong Schedule">Wrong Schedule</option>
-            <option value="Wrong Teacher">Wrong Teacher</option>
-            <option value="Missing Class">Missing Class</option>
+            <option value="Wrong Room">Wrong Room</option><option value="Wrong Schedule">Wrong Schedule</option>
+            <option value="Wrong Teacher">Wrong Teacher</option><option value="Missing Class">Missing Class</option>
             <option value="Other">Other</option>
           </select>
         </div>
@@ -296,7 +275,7 @@
   <div class="overlay" id="notif-center-overlay" aria-hidden="true">
     <div class="modal notif-center-modal" role="dialog" aria-modal="true">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-        <h3 style="margin:0; font-size:1.25rem; font-weight:800;">Notifications</h3>
+        <h3 style="margin:0; font-size:1.25rem; font-weight:800;">🔔 Notifications</h3>
         <button class="btn-secondary" style="padding:6px 12px; font-size:0.8rem;" onclick="markAllNotificationsRead()">Mark all read</button>
       </div>
       <div id="notif-center-list" class="notif-list"></div>
@@ -313,9 +292,7 @@
         <div><label for="new-section-title">Section Name:</label><input type="text" id="new-section-title" placeholder="e.g. BSIT 3A - Morning"></div>
         <div><label for="new-section-session">Schedule Period:</label>
           <select id="new-section-session">
-            <option value="MORNING">Morning</option>
-            <option value="AFTERNOON">Afternoon</option>
-            <option value="EVENING">Evening</option>
+            <option value="MORNING">Morning</option><option value="AFTERNOON">Afternoon</option><option value="EVENING">Evening</option>
           </select>
         </div>
         <div style="display:flex; gap:10px;">
@@ -329,7 +306,7 @@
   <!-- Announcement Modal -->
   <div class="overlay" id="announcement-modal-overlay" aria-hidden="true">
     <div class="modal" role="dialog" aria-modal="true">
-      <h3 style="margin-top:0; font-size:1.25rem; font-weight:800;">Create Announcement</h3>
+      <h3 style="margin-top:0; font-size:1.25rem; font-weight:800;">📢 Create Announcement</h3>
       <div class="auth-form">
         <div><label for="ann-title">Title:</label><input type="text" id="ann-title" placeholder="e.g. Class Suspension Due to Heavy Rain"></div>
         <div><label for="ann-content">Message:</label><textarea id="ann-content" rows="3" placeholder="Announcement details..."></textarea></div>
@@ -367,7 +344,7 @@
   <!-- Room Availability Modal -->
   <div class="overlay" id="room-avail-modal-overlay" aria-hidden="true">
     <div class="modal" role="dialog" aria-modal="true">
-      <h3 style="margin-top:0; font-size:1.25rem; font-weight:800;">Room Availability Checker</h3>
+      <h3 style="margin-top:0; font-size:1.25rem; font-weight:800;">🏫 Room Availability Checker</h3>
       <div class="auth-form">
         <div><label for="avail-day">Day:</label>
           <select id="avail-day">
@@ -386,21 +363,30 @@
     </div>
   </div>
 
-  <!-- Manage Teachers Modal (read-only summary) -->
+  <!-- Manage Teachers Modal -->
   <div class="overlay" id="manage-teachers-modal-overlay" aria-hidden="true">
     <div class="modal" role="dialog" aria-modal="true">
-      <h3 style="margin-top:0; font-size:1.25rem; font-weight:800;">Teachers</h3>
+      <h3 style="margin-top:0; font-size:1.25rem; font-weight:800;">👨‍🏫 Teachers</h3>
       <div id="manage-teachers-list" style="max-height:50vh; overflow-y:auto;"></div>
       <button class="details-close-btn" onclick="document.getElementById('manage-teachers-modal-overlay').classList.remove('open')">Close</button>
     </div>
   </div>
 
-  <!-- Manage Subjects Modal (read-only summary) -->
+  <!-- Manage Subjects Modal -->
   <div class="overlay" id="manage-subjects-modal-overlay" aria-hidden="true">
     <div class="modal" role="dialog" aria-modal="true">
-      <h3 style="margin-top:0; font-size:1.25rem; font-weight:800;">Subjects</h3>
+      <h3 style="margin-top:0; font-size:1.25rem; font-weight:800;">📚 Subjects</h3>
       <div id="manage-subjects-list" style="max-height:50vh; overflow-y:auto;"></div>
       <button class="details-close-btn" onclick="document.getElementById('manage-subjects-modal-overlay').classList.remove('open')">Close</button>
+    </div>
+  </div>
+
+  <!-- Conflict Details Modal -->
+  <div class="overlay" id="conflict-details-modal-overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true">
+      <h3 style="margin-top:0; font-size:1.25rem; font-weight:800;">⚠️ Conflict Details</h3>
+      <div id="conflict-details-list" style="max-height:55vh; overflow-y:auto;"></div>
+      <button class="details-close-btn" onclick="document.getElementById('conflict-details-modal-overlay').classList.remove('open')">Close</button>
     </div>
   </div>
 
