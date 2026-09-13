@@ -99,9 +99,6 @@ body {
   overscroll-behavior-y: none;
 }
 
-/* Defensive reset: neutralizes any leftover empty spacer elements from older
-   builds (e.g. an old empty day-tabs bar) so they can never create blank gaps,
-   even if a stale copy of markup still exists somewhere. */
 #mobile-day-tabs, #student-search-meta {
   display: none !important;
   margin: 0 !important;
@@ -905,7 +902,7 @@ select option { background-color: var(--card-bg) !important; color: var(--text-m
 }
 
 /* ==========================================================================
-   17. MOBILE RESPONSIVE OVERRIDES (compacted spacing)
+   17. MOBILE RESPONSIVE OVERRIDES
    ========================================================================== */
 @media (max-width: 768px) {
   .wrap { padding: 10px 12px calc(28px + var(--safe-bottom)); }
@@ -937,7 +934,6 @@ select option { background-color: var(--card-bg) !important; color: var(--text-m
   .portal-status-bar .status-actions { width: 100%; }
   .portal-status-bar .status-actions button { flex: 1; }
 
-  /* Compact schedule header + search + session bar rhythm */
   .schedule-header { flex-direction: column; align-items: stretch; gap: 10px; margin-bottom: 12px; }
   .chrome-search-container { max-width: 100%; width: 100%; }
   .session-bar-wrapper { margin-bottom: 10px; }
@@ -999,3 +995,205 @@ select option { background-color: var(--card-bg) !important; color: var(--text-m
   .portal-tag { font-size: 0.92rem; }
   .choice-card-btn { font-size: 0.87rem; height: 48px; }
 }
+
+/* ==========================================================================
+   18. NOTIFICATION CENTER & BADGE
+   ========================================================================== */
+.notif-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+}
+
+.notif-center-modal { max-width: 520px; }
+
+.notif-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.notif-item {
+  border: 1px solid var(--border-color);
+  background: var(--input-bg);
+  border-radius: var(--radius-lg);
+  padding: 12px 14px;
+  position: relative;
+}
+
+.notif-item.unread {
+  border-left: 3px solid var(--primary);
+  background: var(--primary-light);
+}
+
+.notif-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.notif-item-title { font-weight: 800; font-size: 0.9rem; color: var(--text-main); }
+.notif-item-time { font-size: 0.7rem; color: var(--text-muted); white-space: nowrap; }
+.notif-item-message { font-size: 0.825rem; color: var(--text-muted); margin-top: 4px; line-height: 1.5; white-space: pre-line; }
+
+.notif-item-actions { display: flex; gap: 8px; margin-top: 8px; }
+.notif-item-actions button {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.notif-empty { text-align: center; color: var(--text-muted); padding: 30px; font-size: 0.9rem; }
+
+/* ==========================================================================
+   19. ANNOUNCEMENT BANNERS
+   ========================================================================== */
+.announcement-banner {
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  border-left: 4px solid var(--primary);
+  background: var(--primary-light);
+}
+
+.announcement-banner.urgent { border-left-color: var(--danger); background: rgba(239,68,68,0.1); }
+.announcement-banner.important { border-left-color: #f59e0b; background: rgba(245,158,11,0.1); }
+
+.announcement-banner-title { font-weight: 800; font-size: 0.9rem; color: var(--text-main); margin-bottom: 4px; }
+.announcement-banner-content { font-size: 0.825rem; color: var(--text-muted); line-height: 1.5; }
+
+/* ==========================================================================
+   20. DASHBOARD, MODALS, CONTEXTUAL NAV, PROFILE
+   ========================================================================== */
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.summary-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 14px;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+}
+
+.summary-card .num { font-size: 1.6rem; font-weight: 800; color: var(--primary); display:block; }
+.summary-card .label { font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; margin-top: 4px; }
+.summary-card.danger .num { color: var(--danger); }
+
+.quick-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.quick-action-btn {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 14px 10px;
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: var(--text-main);
+  cursor: pointer;
+  transition: var(--transition);
+  min-height: 60px;
+}
+
+.quick-action-btn:hover { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
+
+.today-overview-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.status-pill {
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+}
+
+.status-pill.upcoming { background: rgba(59,130,246,0.15); color: #3b82f6; }
+.status-pill.ongoing { background: rgba(16,185,129,0.15); color: var(--success); }
+.status-pill.completed { background: rgba(148,163,184,0.15); color: var(--text-muted); }
+
+.activity-item {
+  border-left: 3px solid var(--border-color);
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.activity-item strong { color: var(--text-main); }
+
+.avail-room-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  margin-bottom: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.avail-room-row.available { background: rgba(16,185,129,0.12); color: var(--success); }
+.avail-room-row.occupied { background: rgba(239,68,68,0.1); color: var(--danger); }
+
+.profile-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.9rem;
+}
+
+.profile-row:last-of-type { border-bottom: none; }
+
+.report-status-select {
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  color: var(--text-main);
+  font-weight: 700;
+}
+
+.student-subpanel { animation: fadeInPanel 0.2s ease; }
+@keyframes fadeInPanel { from { opacity: 0; } to { opacity: 1; } }
