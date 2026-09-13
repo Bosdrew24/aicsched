@@ -1197,3 +1197,28 @@ select option { background-color: var(--card-bg) !important; color: var(--text-m
 
 .student-subpanel { animation: fadeInPanel 0.2s ease; }
 @keyframes fadeInPanel { from { opacity: 0; } to { opacity: 1; } }
+
+/* ==========================================================================
+   21. CONTEXTUAL MENU & CONFLICT WARNING
+   ========================================================================== */
+.conflict-warning-banner {
+  background: rgba(239,68,68,0.1);
+  border-left: 4px solid var(--danger);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.conflict-warning-banner strong { color: var(--danger); }
+.conflict-detail-item {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  font-size: 0.82rem;
+  color: var(--text-main);
+  background: var(--input-bg);
+}
