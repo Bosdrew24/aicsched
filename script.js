@@ -9,14 +9,13 @@ let activeSession = "MORNING";
 let isViewingAllSections = false;
 let sectionsData = [];
 let allSections = [];
-let studentSubpanel = "home"; // home | section | profile
+let studentSubpanel = "home";
+let lastConflictList = [];
 
 // ==========================================
 // THEME
 // ==========================================
-function initTheme() {
-  applyTheme(localStorage.getItem("aics_theme") || "dark");
-}
+function initTheme() { applyTheme(localStorage.getItem("aics_theme") || "dark"); }
 function applyTheme(theme) {
   const isLight = theme === "light";
   document.body.classList.toggle("light-mode", isLight);
@@ -24,9 +23,7 @@ function applyTheme(theme) {
   localStorage.setItem("aics_theme", theme);
   document.querySelectorAll("#theme-toggle-btn").forEach(b => b.textContent = isLight ? "🌙 Dark Mode" : "☀️ Light Mode");
 }
-window.toggleTheme = function () {
-  applyTheme(localStorage.getItem("aics_theme") === "light" ? "dark" : "light");
-};
+window.toggleTheme = function () { applyTheme(localStorage.getItem("aics_theme") === "light" ? "dark" : "light"); };
 
 // ==========================================
 // TIME HELPERS
@@ -54,10 +51,7 @@ function getSlotRangeMinutes(slotStr) {
   if (endMin <= startMin) endMin += 1440;
   return { startMin, endMin };
 }
-function getSlotStartMinutes(slotStr) {
-  const r = getSlotRangeMinutes(slotStr);
-  return r ? r.startMin % 1440 : null;
-}
+function getSlotStartMinutes(slotStr) { const r = getSlotRangeMinutes(slotStr); return r ? r.startMin % 1440 : null; }
 function formatTimeRangeDisplay(slotStr) {
   const r = getSlotRangeMinutes(slotStr);
   if (!r) return slotStr;
@@ -108,13 +102,11 @@ function timeAgo(iso) {
 }
 
 // ==========================================
-// NAVIGATION & CONTEXTUAL BOTTOM NAV
+// NAVIGATION, CONTEXTUAL HAMBURGER + BOTTOM NAV
 // ==========================================
 window.setView = function (viewId) {
   document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
   document.getElementById(viewId)?.classList.add("active");
-  const homeBtn = document.getElementById("home-nav-btn");
-  if (homeBtn) homeBtn.style.display = viewId === "home-view" ? "none" : "inline-flex";
   document.getElementById("hamburger-menu")?.classList.remove("active");
 
   if (viewId === "teacher-view") checkTeacherAuth();
@@ -123,6 +115,7 @@ window.setView = function (viewId) {
 
   updateNotificationButtons();
   renderBottomNav(viewId);
+  updateHamburgerContext(viewId);
 };
 
 window.toggleHamburger = function (e) {
@@ -130,41 +123,56 @@ window.toggleHamburger = function (e) {
   document.getElementById("hamburger-menu")?.classList.toggle("active");
 };
 
+// Shows/hides menu sections based on whether the user is actively logged into a portal.
+function updateHamburgerContext(viewId) {
+  const studentLoggedIn = viewId === "student-view" && !!localStorage.getItem("aics_student_section") && !isViewingAllSections;
+  const teacherLoggedIn = viewId === "teacher-view" && !!localStorage.getItem("aics_teacher_name");
+  const adminLoggedIn = viewId === "admin-view" && localStorage.getItem("aics_admin_logged_in") === "true";
+  const loggedInSomewhere = studentLoggedIn || teacherLoggedIn || adminLoggedIn;
+
+  document.querySelectorAll(".portal-switch-item").forEach(el => { el.style.display = loggedInSomewhere ? "none" : ""; });
+
+  const reportItem = document.getElementById("report-nav-btn");
+  if (reportItem) reportItem.style.display = adminLoggedIn ? "none" : (loggedInSomewhere ? "flex" : "none");
+
+  const notifItem = document.getElementById("notif-nav-btn");
+  if (notifItem) notifItem.style.display = (studentLoggedIn || teacherLoggedIn) ? "flex" : "none";
+
+  const logoutBtn = document.getElementById("context-logout-btn");
+  const logoutDivider = document.getElementById("logout-divider");
+  if (logoutBtn && logoutDivider) {
+    if (loggedInSomewhere) {
+      logoutBtn.style.display = "flex";
+      logoutDivider.style.display = "block";
+      logoutBtn.onclick = studentLoggedIn ? logoutStudent : teacherLoggedIn ? logoutTeacher : logoutAdmin;
+    } else {
+      logoutBtn.style.display = "none";
+      logoutDivider.style.display = "none";
+    }
+  }
+}
+
 function renderBottomNav(viewId) {
   const container = document.getElementById("bottom-nav-container");
   if (!container) return;
-
   const studentActive = viewId === "student-view" && !!localStorage.getItem("aics_student_section") && !isViewingAllSections;
   const teacherActive = viewId === "teacher-view" && !!localStorage.getItem("aics_teacher_name");
-  const logoutBtn = document.getElementById("context-logout-btn");
-  const logoutDivider = document.getElementById("logout-divider");
 
   if (studentActive) {
-    container.innerHTML = `
-      <nav class="bottom-nav" style="display:flex;">
-        <button class="bottom-nav-item ${studentSubpanel === 'home' ? 'active' : ''}" onclick="setStudentSubpanel('home')">🏠<br>Home</button>
-        <button class="bottom-nav-item ${studentSubpanel === 'section' ? 'active' : ''}" onclick="setStudentSubpanel('section')">🎓<br>Section</button>
-        <button class="bottom-nav-item ${studentSubpanel === 'profile' ? 'active' : ''}" onclick="setStudentSubpanel('profile')">👤<br>Profile</button>
-      </nav>`;
-    if (logoutBtn) { logoutBtn.style.display = "flex"; logoutBtn.onclick = logoutStudent; }
-    if (logoutDivider) logoutDivider.style.display = "block";
+    container.innerHTML = `<nav class="bottom-nav" style="display:flex;">
+      <button class="bottom-nav-item ${studentSubpanel === 'home' ? 'active' : ''}" onclick="setStudentSubpanel('home')">🏠<br>Home</button>
+      <button class="bottom-nav-item ${studentSubpanel === 'section' ? 'active' : ''}" onclick="setStudentSubpanel('section')">🎓<br>Section</button>
+      <button class="bottom-nav-item ${studentSubpanel === 'profile' ? 'active' : ''}" onclick="setStudentSubpanel('profile')">👤<br>Profile</button>
+    </nav>`;
   } else if (teacherActive) {
-    container.innerHTML = `
-      <nav class="bottom-nav" style="display:flex;">
-        <button class="bottom-nav-item active">👨‍🏫<br>Schedule</button>
-      </nav>`;
-    if (logoutBtn) { logoutBtn.style.display = "flex"; logoutBtn.onclick = logoutTeacher; }
-    if (logoutDivider) logoutDivider.style.display = "block";
+    container.innerHTML = `<nav class="bottom-nav" style="display:flex;"><button class="bottom-nav-item active">👨‍🏫<br>Schedule</button></nav>`;
   } else {
-    container.innerHTML = `
-      <nav class="bottom-nav" style="display:flex;">
-        <button class="bottom-nav-item ${viewId === 'home-view' ? 'active' : ''}" onclick="setView('home-view')">🏠<br>Home</button>
-        <button class="bottom-nav-item ${viewId === 'student-view' ? 'active' : ''}" onclick="openStudentLogin()">🎓<br>Student</button>
-        <button class="bottom-nav-item ${viewId === 'teacher-view' ? 'active' : ''}" onclick="openTeacherLogin()">👨‍🏫<br>Teacher</button>
-        <button class="bottom-nav-item ${viewId === 'admin-view' ? 'active' : ''}" onclick="openAdminModal()">⚙️<br>Admin</button>
-      </nav>`;
-    if (logoutBtn) logoutBtn.style.display = "none";
-    if (logoutDivider) logoutDivider.style.display = "none";
+    container.innerHTML = `<nav class="bottom-nav" style="display:flex;">
+      <button class="bottom-nav-item ${viewId === 'home-view' ? 'active' : ''}" onclick="setView('home-view')">🏠<br>Home</button>
+      <button class="bottom-nav-item ${viewId === 'student-view' ? 'active' : ''}" onclick="openStudentLogin()">🎓<br>Student</button>
+      <button class="bottom-nav-item ${viewId === 'teacher-view' ? 'active' : ''}" onclick="openTeacherLogin()">👨‍🏫<br>Teacher</button>
+      <button class="bottom-nav-item ${viewId === 'admin-view' ? 'active' : ''}" onclick="openAdminModal()">⚙️<br>Admin</button>
+    </nav>`;
   }
 }
 
@@ -189,7 +197,6 @@ function checkStudentAuth() {
   if (isViewingAllSections || savedSection) {
     gateCard.style.display = "none";
     mainContent.style.display = "block";
-
     if (isViewingAllSections) {
       studentSubpanel = "section";
       document.querySelectorAll(".student-subpanel").forEach(p => p.style.display = "none");
@@ -217,24 +224,18 @@ function checkStudentAuth() {
   }
   updateNotificationButtons();
   renderBottomNav("student-view");
+  updateHamburgerContext("student-view");
 }
 
-window.openStudentLogin = function () {
-  isViewingAllSections = false;
-  studentSubpanel = "home";
-  window.setView("student-view");
-};
-window.viewAllSections = function () {
-  isViewingAllSections = true;
-  window.setView("student-view");
-};
+window.openStudentLogin = function () { isViewingAllSections = false; studentSubpanel = "home"; window.setView("student-view"); };
+window.viewAllSections = function () { isViewingAllSections = true; window.setView("student-view"); };
 window.submitStudentLogin = function () {
   const input = document.getElementById("student-section-input");
   if (!input?.value.trim()) { alert("Please enter a valid section code."); return; }
   localStorage.setItem("aics_student_section", input.value.trim());
-  isViewingAllSections = false;
-  studentSubpanel = "home";
+  isViewingAllSections = false; studentSubpanel = "home";
   checkStudentAuth();
+  updateHamburgerContext("student-view");
   if (localStorage.getItem("aics_notifications_enabled") === "true") {
     const t = localStorage.getItem("aics_fcm_token");
     if (t) saveDeviceTokenToSupabase(t);
@@ -242,7 +243,7 @@ window.submitStudentLogin = function () {
 };
 window.logoutStudent = function () {
   localStorage.removeItem("aics_student_section");
-  document.getElementById("student-search-input") && (document.getElementById("student-search-input").value = "");
+  const si = document.getElementById("student-search-input"); if (si) si.value = "";
   isViewingAllSections = false;
   window.setView("home-view");
 };
@@ -252,8 +253,7 @@ function renderStudentTodayList() {
   if (!container) return;
   const savedSection = localStorage.getItem("aics_student_section");
   const sec = sectionsData.find(s => s.code?.toLowerCase() === savedSection?.toLowerCase());
-  if (!sec || !sec.cells || !sec.slots) { container.innerHTML = `<div class="next-class-empty">No schedule loaded.</div>`; return; }
-
+  if (!sec?.cells || !sec.slots) { container.innerHTML = `<div class="next-class-empty">No schedule loaded.</div>`; return; }
   const dayIdx = getManilaCellDayIndex();
   if (dayIdx === null) { container.innerHTML = `<div class="next-class-empty">No classes today 🎉</div>`; return; }
 
@@ -266,27 +266,21 @@ function renderStudentTodayList() {
     if (!range || !cell) return;
     items.push({ ...cell, startMin: range.startMin, timeDisplay: formatTimeRangeDisplay(sec.slots[parseInt(rStr, 10)]) });
   });
-
-  if (items.length === 0) { container.innerHTML = `<div class="next-class-empty">No classes today 🎉</div>`; return; }
+  if (!items.length) { container.innerHTML = `<div class="next-class-empty">No classes today 🎉</div>`; return; }
   items.sort((a, b) => a.startMin - b.startMin);
   const minutesNow = getManilaMinutesNow();
 
   container.innerHTML = items.map(it => {
     let status = "upcoming", label = "🟢 Upcoming";
-    if (minutesNow >= it.startMin && minutesNow < (it.startMin + 60)) { status = "ongoing"; label = "🔵 Ongoing"; }
+    if (minutesNow >= it.startMin && minutesNow < it.startMin + 60) { status = "ongoing"; label = "🔵 Ongoing"; }
     else if (minutesNow >= it.startMin + 60) { status = "completed"; label = "⚪ Completed"; }
-    return `<div class="today-overview-item">
-      <div><strong>${it.subject || it.name}</strong><br><span style="font-size:0.8rem; color:var(--text-muted);">🕒 ${it.timeDisplay} • 📍 ${displayRoom(it.room, dayIdx)} • 👤 ${it.professor || '—'}</span></div>
-      <span class="status-pill ${status}">${label}</span>
-    </div>`;
+    return `<div class="today-overview-item"><div><strong>${it.subject || it.name}</strong><br><span style="font-size:0.8rem; color:var(--text-muted);">🕒 ${it.timeDisplay} • 📍 ${displayRoom(it.room, dayIdx)} • 👤 ${it.professor || '—'}</span></div><span class="status-pill ${status}">${label}</span></div>`;
   }).join('');
 }
-
 function renderStudentProfile() {
   const section = localStorage.getItem("aics_student_section") || "--";
   const alertsOn = localStorage.getItem("aics_notifications_enabled") === "true";
-  const sv = document.getElementById("profile-section-value");
-  const av = document.getElementById("profile-alerts-value");
+  const sv = document.getElementById("profile-section-value"), av = document.getElementById("profile-alerts-value");
   if (sv) sv.textContent = section;
   if (av) av.textContent = alertsOn ? "Enabled" : "Disabled";
 }
@@ -300,19 +294,17 @@ function checkTeacherAuth() {
   const gateCard = document.getElementById("teacher-gate-card");
   const mainContent = document.getElementById("teacher-main-content");
   if (savedTeacher && gateCard && mainContent) {
-    gateCard.style.display = "none";
-    mainContent.style.display = "block";
+    gateCard.style.display = "none"; mainContent.style.display = "block";
     document.getElementById("active-teacher-badge").textContent = `Faculty: ${savedTeacher}`;
-    renderTeacherSchedule();
-    renderTeacherNextClassCard();
+    renderTeacherSchedule(); renderTeacherNextClassCard();
     renderAnnouncementBanner("teacher-announcements-container", "teacher", savedTeacher);
     refreshNotificationBadge();
   } else if (gateCard && mainContent) {
-    gateCard.style.display = "block";
-    mainContent.style.display = "none";
+    gateCard.style.display = "block"; mainContent.style.display = "none";
   }
   updateNotificationButtons();
   renderBottomNav("teacher-view");
+  updateHamburgerContext("teacher-view");
 }
 window.openTeacherLogin = function () { window.setView("teacher-view"); };
 window.submitTeacherLogin = function () {
@@ -320,15 +312,13 @@ window.submitTeacherLogin = function () {
   if (!select?.value) { alert("Please select your faculty profile."); return; }
   localStorage.setItem("aics_teacher_name", select.value);
   checkTeacherAuth();
+  updateHamburgerContext("teacher-view");
   if (localStorage.getItem("aics_notifications_enabled") === "true") {
     const t = localStorage.getItem("aics_fcm_token");
     if (t) saveDeviceTokenToSupabase(t);
   }
 };
-window.logoutTeacher = function () {
-  localStorage.removeItem("aics_teacher_name");
-  window.setView("home-view");
-};
+window.logoutTeacher = function () { localStorage.removeItem("aics_teacher_name"); window.setView("home-view"); };
 
 // ==========================================
 // ADMIN PORTAL
@@ -339,29 +329,22 @@ function checkAdminAuth() {
   const gateCard = document.getElementById("admin-gate-card");
   const mainContent = document.getElementById("admin-main-content");
   if (isAdmin && gateCard && mainContent) {
-    gateCard.style.display = "none";
-    mainContent.style.display = "block";
-    renderAdminSections();
-    fetchAndRenderReports();
-    renderAdminAnnouncements();
-    renderAdminDashboard();
+    gateCard.style.display = "none"; mainContent.style.display = "block";
+    renderAdminSections(); fetchAndRenderReports(); renderAdminAnnouncements(); renderAdminDashboard();
   } else if (gateCard && mainContent) {
-    gateCard.style.display = "block";
-    mainContent.style.display = "none";
+    gateCard.style.display = "block"; mainContent.style.display = "none";
   }
   renderBottomNav("admin-view");
+  updateHamburgerContext("admin-view");
 }
 window.submitAdminViewLogin = function () {
   const p = document.getElementById("admin-view-pass-input");
   if (!p?.value.trim()) { alert("Please enter the admin passcode."); return; }
-  localStorage.setItem("aics_admin_logged_in", "true");
-  p.value = "";
+  localStorage.setItem("aics_admin_logged_in", "true"); p.value = "";
   checkAdminAuth();
+  updateHamburgerContext("admin-view");
 };
-window.logoutAdmin = function () {
-  localStorage.removeItem("aics_admin_logged_in");
-  window.setView("home-view");
-};
+window.logoutAdmin = function () { localStorage.removeItem("aics_admin_logged_in"); window.setView("home-view"); };
 
 // ==========================================
 // SCHEDULES DATA
@@ -384,11 +367,9 @@ function renderAdminSections() {
   const container = document.getElementById("admin-sections-list");
   if (!container) return;
   const searchVal = (document.getElementById("admin-section-search-input")?.value || "").trim().toLowerCase();
-  let list = (allSections && allSections.length > 0) ? allSections : sectionsData;
+  let list = (allSections?.length > 0) ? allSections : sectionsData;
   if (searchVal) list = list.filter(s => (s.code || "").toLowerCase().includes(searchVal) || (s.title || "").toLowerCase().includes(searchVal));
-
-  if (!list || list.length === 0) { container.innerHTML = '<p style="color:var(--text-muted); padding:12px;">No sections found.</p>'; return; }
-
+  if (!list?.length) { container.innerHTML = '<p style="color:var(--text-muted); padding:12px;">No sections found.</p>'; return; }
   container.innerHTML = list.map(sec => `
     <div class="admin-section-card" style="border: 1px solid var(--border-color); background: var(--card-bg); border-radius: var(--radius-lg); padding: 16px; margin-bottom: 12px;">
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
@@ -401,29 +382,24 @@ function renderAdminSections() {
       </div>
     </div>`).join('');
 }
-
 window.openAddSectionModal = function () { document.getElementById("add-section-modal-overlay").classList.add("open"); };
 window.closeAddSectionModal = function () { document.getElementById("add-section-modal-overlay").classList.remove("open"); };
-
 window.addNewSection = async function () {
   const code = document.getElementById("new-section-code")?.value.trim();
   const title = document.getElementById("new-section-title")?.value.trim();
   const session = document.getElementById("new-section-session")?.value || "MORNING";
   if (!code || !title) { alert("Please fill in section code and name."); return; }
-
   const newSec = { id: crypto.randomUUID(), code, title, session, slots: getDefaultSlotsForSession(session), cells: {} };
   try {
     const { error } = await db.from("schedules").insert([newSec]);
     if (error) { alert("Error adding section: " + error.message); return; }
     await db.from("schedule_history").insert([{ section_code: code, action: "created", cell_key: null, previous_data: null, new_data: newSec, changed_by: "admin" }]);
-    document.getElementById("new-section-code").value = "";
-    document.getElementById("new-section-title").value = "";
+    document.getElementById("new-section-code").value = ""; document.getElementById("new-section-title").value = "";
     closeAddSectionModal();
     await window.loadSchedules();
     alert("Section created successfully!");
   } catch (err) { console.error(err); }
 };
-
 window.deleteSection = async function (identifier) {
   if (!confirm(`Delete section ${identifier}?`)) return;
   try {
@@ -443,10 +419,7 @@ window.addEditorRow = function () {
   const currentSession = document.getElementById("edit-sec-session")?.value || "MORNING";
   const rows = tbody.querySelectorAll("tr");
   let lastSlotVal = "";
-  if (rows.length > 0) {
-    const li = rows[rows.length - 1].querySelector(".edit-slot-input");
-    if (li?.value.trim()) lastSlotVal = li.value.trim();
-  }
+  if (rows.length > 0) { const li = rows[rows.length - 1].querySelector(".edit-slot-input"); if (li?.value.trim()) lastSlotVal = li.value.trim(); }
   const nextSlot = getNextTimeSlot(lastSlotVal, currentSession);
   const tr = document.createElement("tr");
   let html = `<td style="background:var(--card-bg); padding:4px; border:1px solid var(--border-color); width:130px; min-width:130px;">
@@ -461,8 +434,7 @@ window.addEditorRow = function () {
   });
   html += `<td style="background:var(--card-bg); border:1px solid var(--border-color); text-align:center; vertical-align:middle; padding:2px; min-width:44px;">
     <button type="button" onclick="deleteEditorRow(this)" style="background:var(--danger); color:#fff; border:none; width:24px; height:24px; border-radius:4px; font-weight:bold; cursor:pointer;">&times;</button></td>`;
-  tr.innerHTML = html;
-  tbody.appendChild(tr);
+  tr.innerHTML = html; tbody.appendChild(tr);
 };
 window.deleteEditorRow = function (btn) { btn.closest("tr")?.remove(); };
 
@@ -472,17 +444,14 @@ window.deleteEditorRow = function (btn) { btn.closest("tr")?.remove(); };
 window.editSection = function (identifier) {
   const sec = sectionsData.find(s => (s.id && String(s.id) === String(identifier)) || (s.code && String(s.code) === String(identifier)));
   if (!sec) { alert("Section not found."); return; }
-
   let modal = document.getElementById("admin-edit-section-modal");
   if (modal) modal.remove();
   modal = document.createElement("div");
   modal.id = "admin-edit-section-modal";
   modal.style.cssText = `position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 10000; padding: 10px; box-sizing: border-box;`;
-
   const editingCells = sec.cells || {};
   const currentSession = sec.session || "MORNING";
   const slots = (sec.slots?.length > 0) ? sec.slots : getDefaultSlotsForSession(currentSession);
-
   let rowsHtml = '';
   slots.forEach((slot, r) => {
     rowsHtml += `<tr><td style="background:var(--card-bg); padding:4px; border:1px solid var(--border-color); width:130px; min-width:130px;">
@@ -499,7 +468,6 @@ window.editSection = function (identifier) {
     rowsHtml += `<td style="background:var(--card-bg); border:1px solid var(--border-color); text-align:center; vertical-align:middle; padding:2px; min-width:44px;">
       <button type="button" onclick="deleteEditorRow(this)" style="background:var(--danger); color:#fff; border:none; width:24px; height:24px; border-radius:4px; font-weight:bold; cursor:pointer;">&times;</button></td></tr>`;
   });
-
   modal.innerHTML = `
     <div style="background: var(--card-bg); border-radius: var(--radius-xl); max-width: 1020px; width: 100%; max-height: 95vh; overflow-y: auto; color: var(--text-main); border:1px solid var(--border-color); box-shadow: var(--shadow-modal); padding:0;">
       <div style="background:var(--card-bg); padding:20px; text-align:center; border-bottom: 2px solid var(--border-color);">
@@ -547,7 +515,7 @@ window.editSection = function (identifier) {
   document.body.appendChild(modal);
 };
 
-// ---- Conflict detection ----
+// ---- Conflict detection (with dedupe) ----
 function addBookingsFromSection(sectionCode, slots, cells, bookings) {
   Object.keys(cells).forEach(key => {
     const cell = cells[key]; if (!cell) return;
@@ -570,15 +538,35 @@ function collectRoomBookings(excludeIdentifier, override) {
   return bookings;
 }
 function timesOverlap(a, b) { return a.startMin < b.endMin && a.endMin > b.startMin; }
+
+// Deduped: each unique pair of bookings produces at most ONE room conflict entry
+// and ONE teacher conflict entry, instead of accumulating duplicates if the same
+// pair happens to be compared more than once.
 function findRoomConflicts(bookings) {
   const conflicts = [];
-  for (let i = 0; i < bookings.length; i++) for (let j = i + 1; j < bookings.length; j++) {
-    const a = bookings[i], b = bookings[j];
-    if (a.sectionCode === b.sectionCode || a.dayIdx !== b.dayIdx || !timesOverlap(a, b)) continue;
-    if (a.room && b.room && a.room === b.room && a.room !== "tba" && a.room !== "online")
-      conflicts.push({ type: "room", message: `⚠️ Room Conflict Detected\nRoom ${a.room.toUpperCase()} is already occupied by ${a.sectionCode} (${a.subject}) from ${a.slotDisplay}, conflicting with ${b.sectionCode} (${b.subject}) at ${b.slotDisplay} on ${DAYS_CLEAN[a.dayIdx]}.` });
-    if (a.professor && b.professor && a.professor === b.professor)
-      conflicts.push({ type: "teacher", message: `⚠️ Teacher Conflict Detected\n${a.professor.replace(/\b\w/g, c => c.toUpperCase())} is already assigned to ${a.sectionCode} (${a.subject}) from ${a.slotDisplay}, conflicting with ${b.sectionCode} (${b.subject}) at ${b.slotDisplay} on ${DAYS_CLEAN[a.dayIdx]}.` });
+  const seenRoom = new Set(), seenTeacher = new Set();
+  for (let i = 0; i < bookings.length; i++) {
+    for (let j = i + 1; j < bookings.length; j++) {
+      const a = bookings[i], b = bookings[j];
+      if (a.sectionCode === b.sectionCode || a.dayIdx !== b.dayIdx || !timesOverlap(a, b)) continue;
+
+      if (a.room && b.room && a.room === b.room && a.room !== "tba" && a.room !== "online") {
+        const key = [a.sectionCode, b.sectionCode, a.dayIdx, a.room, a.startMin, b.startMin].sort().join('|');
+        if (!seenRoom.has(key)) {
+          seenRoom.add(key);
+          conflicts.push({ type: "room", sectionA: a.sectionCode, sectionB: b.sectionCode, room: a.room.toUpperCase(), day: DAYS_CLEAN[a.dayIdx],
+            message: `⚠️ Room Conflict\nRoom ${a.room.toUpperCase()} — ${a.sectionCode} (${a.subject}, ${a.slotDisplay}) overlaps ${b.sectionCode} (${b.subject}, ${b.slotDisplay}) on ${DAYS_CLEAN[a.dayIdx]}.` });
+        }
+      }
+      if (a.professor && b.professor && a.professor === b.professor) {
+        const key = [a.sectionCode, b.sectionCode, a.dayIdx, a.professor, a.startMin, b.startMin].sort().join('|');
+        if (!seenTeacher.has(key)) {
+          seenTeacher.add(key);
+          conflicts.push({ type: "teacher", sectionA: a.sectionCode, sectionB: b.sectionCode, teacher: a.professor, day: DAYS_CLEAN[a.dayIdx],
+            message: `⚠️ Teacher Conflict\n${a.professor.replace(/\b\w/g, c => c.toUpperCase())} — ${a.sectionCode} (${a.subject}, ${a.slotDisplay}) overlaps ${b.sectionCode} (${b.subject}, ${b.slotDisplay}) on ${DAYS_CLEAN[a.dayIdx]}.` });
+        }
+      }
+    }
   }
   return conflicts;
 }
@@ -591,7 +579,7 @@ function findDuplicateSchedules(slots, cells) {
     const range = getSlotRangeMinutes(slots[parseInt(rStr, 10)]);
     if (!range) return;
     const fp = `${dayIdx}-${range.startMin}-${range.endMin}-${(cell.subject || "").toLowerCase()}-${(cell.room || "").toLowerCase()}`;
-    if (seen[fp]) dups.push(`⚠️ Duplicate Schedule Detected\n${cell.subject || cell.name} appears twice on ${DAYS_CLEAN[dayIdx]} at the same time and room.`);
+    if (seen[fp]) dups.push(`⚠️ Duplicate Schedule\n${cell.subject || cell.name} appears twice on ${DAYS_CLEAN[dayIdx]} at the same time and room.`);
     seen[fp] = true;
   });
   return dups;
@@ -607,14 +595,13 @@ function diffSectionCells(sectionCode, oldSlots, oldCells, newSlots, newCells) {
     const dayIdx = parseInt(cStr, 10), dayName = DAYS_CLEAN[dayIdx] || `Day ${dayIdx}`;
     const oldTime = oldSlots?.[rStr] ? formatTimeRangeDisplay(oldSlots[rStr]) : "";
     const newTime = newSlots?.[rStr] ? formatTimeRangeDisplay(newSlots[rStr]) : "";
-
     if (!oldCell && newCell) {
       diffs.push({ key, action: "created", oldData: null, newData: newCell,
         notifStudent: `📅 New Class Added\n${newCell.subject || newCell.name} added on ${dayName} at ${newTime}, Room ${newCell.room || "TBA"}.`,
         notifTeacher: newCell.professor ? { teacher: newCell.professor, message: `👨‍🏫 New Class Assigned\nYou've been assigned ${sectionCode} - ${newCell.subject || newCell.name} on ${dayName} at ${newTime}, Room ${newCell.room || "TBA"}.` } : null });
     } else if (oldCell && !newCell) {
       diffs.push({ key, action: "deleted", oldData: oldCell, newData: null,
-        notifStudent: `❌ Class Removed\n${oldCell.subject || oldCell.name} on ${dayName} at ${oldTime} has been removed from your schedule.`,
+        notifStudent: `❌ Class Removed\n${oldCell.subject || oldCell.name} on ${dayName} at ${oldTime} has been removed.`,
         notifTeacher: oldCell.professor ? { teacher: oldCell.professor, message: `❌ Class Removed\nYour ${sectionCode} - ${oldCell.subject || oldCell.name} class on ${dayName} at ${oldTime} has been removed.` } : null });
     } else if (oldCell && newCell) {
       const changes = [];
@@ -650,7 +637,6 @@ async function writeScheduleHistoryAndNotifications(sectionCode, diffs) {
     if (notifRows.length) await db.from("notifications").insert(notifRows);
   } catch (err) { console.error(err); }
 }
-
 window.saveSectionChanges = async function (identifier) {
   const sec = sectionsData.find(s => (s.id && String(s.id) === String(identifier)) || (s.code && String(s.code) === String(identifier)));
   if (!sec) return;
@@ -668,7 +654,6 @@ window.saveSectionChanges = async function (identifier) {
       if (sub || prof || room) updatedCells[key] = { subject: sub, name: sub, professor: prof, room };
     });
   });
-
   const bookings = collectRoomBookings(identifier, { code: newCode, slots: newSlots, cells: updatedCells });
   const conflicts = findRoomConflicts(bookings);
   const dups = findDuplicateSchedules(newSlots, updatedCells);
@@ -678,10 +663,8 @@ window.saveSectionChanges = async function (identifier) {
     const more = allIssues.length > 4 ? `\n\n...and ${allIssues.length - 4} more issue(s)` : '';
     if (!confirm(`${preview}${more}\n\nSave anyway?`)) return;
   }
-
   const diffs = diffSectionCells(newCode, sec.slots || [], sec.cells || {}, newSlots, updatedCells);
   const payload = { code: newCode, title: `${newCode} - ${newSession} SESSION`, session: newSession, slots: newSlots, cells: updatedCells };
-
   try {
     let q = db.from("schedules");
     q = sec.id ? q.update(payload).eq("id", sec.id) : q.update(payload).eq("code", sec.code);
@@ -715,15 +698,12 @@ function populateTeacherDropdown() {
     });
   });
 }
-
 window.renderTeacherSchedule = function () {
   const container = document.getElementById("teacher-schedule-container");
   if (!container) return;
   const selectedTeacher = localStorage.getItem("aics_teacher_name") || "";
   if (!selectedTeacher) { container.innerHTML = '<div style="color: var(--text-muted); text-align:center; padding:30px;">Please select your name.</div>'; return; }
-
-  const timeMap = {};
-  let hasClasses = false;
+  const timeMap = {}; let hasClasses = false;
   sectionsData.forEach(sec => {
     if (!sec.cells || !sec.slots) return;
     sec.slots.forEach((slot, rowIdx) => {
@@ -740,10 +720,8 @@ window.renderTeacherSchedule = function () {
       });
     });
   });
-
   if (!hasClasses) { container.innerHTML = `<div style="color: var(--text-muted); text-align:center; padding:30px;">No assigned classes found for <strong>${selectedTeacher}</strong>.</div>`; return; }
   const rows = Object.values(timeMap).sort((a, b) => a.startMin - b.startMin);
-
   let html = `<div class="section-card" style="margin-bottom:20px;"><div class="section-header-bar"><span class="portal-tag">Faculty Schedule: ${selectedTeacher}</span></div>
     <div class="schedule-table-container"><table class="responsive-table"><thead><tr><th>TIME</th>`;
   DAYS.forEach(d => html += `<th>${d}</th>`);
@@ -752,11 +730,8 @@ window.renderTeacherSchedule = function () {
     html += `<tr><td class="time-cell">${row.display}</td>`;
     DAYS.forEach((d, dayIdx) => {
       const items = row.byDay[dayIdx];
-      if (items?.length) {
-        html += '<td class="class-cell">';
-        items.forEach(item => html += `<div class="cell-code">${item.subject}</div><div class="cell-name">Sec: ${item.section} (${item.room})</div>`);
-        html += '</td>';
-      } else html += '<td class="class-cell"><div class="cell-empty">-</div></td>';
+      if (items?.length) { html += '<td class="class-cell">'; items.forEach(item => html += `<div class="cell-code">${item.subject}</div><div class="cell-name">Sec: ${item.section} (${item.room})</div>`); html += '</td>'; }
+      else html += '<td class="class-cell"><div class="cell-empty">-</div></td>';
     });
     html += '</tr>';
   });
@@ -772,21 +747,18 @@ function renderSections() {
   if (!container) return;
   container.innerHTML = "";
   if (!sectionsData.length) { container.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-muted);">No schedules loaded.</div>'; return; }
-
   sectionsData.forEach(sec => {
     const card = document.createElement("div");
     card.className = "section-card";
     card.dataset.session = sec.session || "";
     card.dataset.sectionCode = (sec.code || "").trim().toLowerCase();
     card.dataset.sectionTitle = (sec.title || sec.code || "").trim().toLowerCase();
-
     const header = document.createElement("div");
     header.className = "section-header-bar";
     const toggleBtn = document.createElement("button");
     toggleBtn.className = "section-toggle-btn";
     toggleBtn.innerHTML = `<span>${sec.title || sec.code}</span>`;
     header.appendChild(toggleBtn);
-
     const tableDiv = document.createElement("div");
     tableDiv.className = "schedule-table-container";
     let html = '<table class="responsive-table"><thead><tr><th>TIME</th>';
@@ -806,7 +778,6 @@ function renderSections() {
     });
     html += '</tbody></table>';
     tableDiv.innerHTML = html;
-
     toggleBtn.addEventListener("click", () => { tableDiv.classList.toggle("hidden"); toggleBtn.classList.toggle("collapsed"); });
     tableDiv.querySelectorAll(".class-cell").forEach(td => {
       td.addEventListener("click", () => {
@@ -977,8 +948,7 @@ window.toggleNotifications = async function () {
       PN.addListener('registrationError', e => console.error(e));
       localStorage.setItem("aics_notifications_enabled", "true");
       alert("True push notifications enabled successfully!");
-      updateNotificationButtons();
-      renderStudentProfile();
+      updateNotificationButtons(); renderStudentProfile();
     } catch (err) { console.error(err); fallbackWebNotification(); }
   } else fallbackWebNotification();
 };
@@ -1008,7 +978,7 @@ function updateNotificationButtons() {
 }
 
 // ==========================================
-// ROOM CONFLICT / ISSUE REPORTS
+// REPORTS
 // ==========================================
 window.openReportModal = function () {
   const savedSection = localStorage.getItem("aics_student_section");
@@ -1039,31 +1009,24 @@ async function fetchAndRenderReports() {
   if (!container) return;
   try {
     const { data, error } = await db.from("room_reports").select("*").order("created_at", { ascending: false });
-    if (error) { container.innerHTML = `<p style="color:var(--text-muted); padding:12px;">Could not load reports.</p>`; return; }
-    if (!data?.length) { container.innerHTML = `<p style="color:var(--text-muted); padding:12px;">No reports submitted.</p>`; return; }
+    if (error || !data?.length) { container.innerHTML = `<p style="color:var(--text-muted); padding:12px;">No reports submitted.</p>`; return; }
     container.innerHTML = data.map(r => {
       const status = (r.status === 'pending') ? 'submitted' : (r.status === 'dismissed' ? 'resolved' : r.status);
       const badgeColor = status === 'resolved' ? 'var(--success)' : status === 'under_review' ? '#f59e0b' : 'var(--danger)';
       return `<div class="report-item">
-        <div class="report-item-header">
-          <span class="report-item-badge" style="background:${badgeColor};">${status.replace('_',' ')}</span>
-          <span class="report-item-meta">${r.section_code || 'Unknown'} • ${r.day || '—'} • ${r.time_slot || '—'}</span>
-        </div>
+        <div class="report-item-header"><span class="report-item-badge" style="background:${badgeColor};">${status.replace('_',' ')}</span>
+        <span class="report-item-meta">${r.section_code || 'Unknown'} • ${r.day || '—'} • ${r.time_slot || '—'}</span></div>
         <div class="report-item-details"><strong>Room:</strong> ${r.room}${r.details ? `<br><strong>Details:</strong> ${r.details}` : ''}</div>
-        <div class="report-item-actions">
-          <select class="report-status-select" onchange="updateReportStatus('${r.id}', this.value)">
-            <option value="submitted" ${status==='submitted'?'selected':''}>Submitted</option>
-            <option value="under_review" ${status==='under_review'?'selected':''}>Under Review</option>
-            <option value="resolved" ${status==='resolved'?'selected':''}>Resolved</option>
-          </select>
-        </div>
-      </div>`;
+        <div class="report-item-actions"><select class="report-status-select" onchange="updateReportStatus('${r.id}', this.value)">
+          <option value="submitted" ${status==='submitted'?'selected':''}>Submitted</option>
+          <option value="under_review" ${status==='under_review'?'selected':''}>Under Review</option>
+          <option value="resolved" ${status==='resolved'?'selected':''}>Resolved</option>
+        </select></div></div>`;
     }).join('');
   } catch (err) { console.error(err); }
 }
 window.updateReportStatus = async function (id, newStatus) {
-  try { const { error } = await db.from("room_reports").update({ status: newStatus }).eq("id", id); if (error) alert("Failed: " + error.message); }
-  catch (err) { console.error(err); }
+  try { const { error } = await db.from("room_reports").update({ status: newStatus }).eq("id", id); if (error) alert("Failed: " + error.message); } catch (err) { console.error(err); }
 };
 
 // ==========================================
@@ -1166,12 +1129,10 @@ window.markNotificationRead = async function (id) {
 window.markAllNotificationsRead = async function () {
   const identity = getCurrentNotifIdentity();
   if (!identity) return;
-  try { await db.from("notifications").update({ is_read: true }).eq("recipient_type", identity.type).eq("recipient_value", identity.value).eq("is_read", false); openNotificationCenter(); refreshNotificationBadge(); }
-  catch (err) { console.error(err); }
+  try { await db.from("notifications").update({ is_read: true }).eq("recipient_type", identity.type).eq("recipient_value", identity.value).eq("is_read", false); openNotificationCenter(); refreshNotificationBadge(); } catch (err) { console.error(err); }
 };
 window.deleteNotification = async function (id) {
-  try { await db.from("notifications").delete().eq("id", id); document.getElementById(`notif-row-${id}`)?.remove(); refreshNotificationBadge(); }
-  catch (err) { console.error(err); }
+  try { await db.from("notifications").delete().eq("id", id); document.getElementById(`notif-row-${id}`)?.remove(); refreshNotificationBadge(); } catch (err) { console.error(err); }
 };
 async function refreshNotificationBadge() {
   const identity = getCurrentNotifIdentity();
@@ -1187,7 +1148,7 @@ async function refreshNotificationBadge() {
 }
 
 // ==========================================
-// PHASE 4: ADMIN DASHBOARD
+// ADMIN DASHBOARD
 // ==========================================
 async function renderAdminDashboard() {
   const totalSections = sectionsData.length;
@@ -1202,7 +1163,8 @@ async function renderAdminDashboard() {
   }));
 
   const bookings = collectRoomBookings(null, null);
-  const conflictCount = findRoomConflicts(bookings).length;
+  const conflicts = findRoomConflicts(bookings);
+  lastConflictList = conflicts;
 
   let pendingReports = 0;
   try {
@@ -1218,14 +1180,36 @@ async function renderAdminDashboard() {
       <div class="summary-card"><span class="num">${subjectSet.size}</span><span class="label">Subjects</span></div>
       <div class="summary-card"><span class="num">${roomSet.size}</span><span class="label">Rooms</span></div>
       <div class="summary-card"><span class="num">${totalClasses}</span><span class="label">Scheduled Classes</span></div>
-      <div class="summary-card ${conflictCount > 0 ? 'danger' : ''}"><span class="num">${conflictCount}</span><span class="label">Active Conflicts</span></div>
+      <div class="summary-card ${conflicts.length > 0 ? 'danger' : ''}"><span class="num">${conflicts.length}</span><span class="label">Active Conflicts</span></div>
       <div class="summary-card ${pendingReports > 0 ? 'danger' : ''}"><span class="num">${pendingReports}</span><span class="label">Pending Reports</span></div>
     `;
+  }
+
+  const warningEl = document.getElementById("admin-conflict-warning");
+  if (warningEl) {
+    if (conflicts.length > 0) {
+      warningEl.style.display = "flex";
+      warningEl.className = "conflict-warning-banner";
+      warningEl.innerHTML = `<span><strong>⚠️ ${conflicts.length} conflict(s) detected.</strong> Click to see exactly which classes overlap.</span>
+        <button class="btn-secondary" style="padding:6px 14px; font-size:0.8rem;" onclick="showConflictDetails()">View Conflict Details</button>`;
+    } else {
+      warningEl.style.display = "none";
+    }
   }
 
   renderTodayOverview();
   renderRecentActivities();
 }
+
+window.showConflictDetails = function () {
+  const list = document.getElementById("conflict-details-list");
+  if (!list) return;
+  if (!lastConflictList.length) { list.innerHTML = `<p style="color:var(--text-muted);">No conflicts found.</p>`; }
+  else {
+    list.innerHTML = lastConflictList.map(c => `<div class="conflict-detail-item">${c.message.replace(/\n/g, '<br>')}</div>`).join('');
+  }
+  document.getElementById("conflict-details-modal-overlay").classList.add("open");
+};
 
 function renderTodayOverview() {
   const container = document.getElementById("admin-today-overview");
@@ -1250,13 +1234,9 @@ function renderTodayOverview() {
     let status = "upcoming", label = "🟢 Upcoming";
     if (minutesNow >= it.startMin && minutesNow < it.startMin + 60) { status = "ongoing"; label = "🔵 Ongoing"; }
     else if (minutesNow >= it.startMin + 60) { status = "completed"; label = "⚪ Completed"; }
-    return `<div class="today-overview-item">
-      <div><strong>${it.subject || it.name}</strong> — ${it.section}<br><span style="font-size:0.8rem; color:var(--text-muted);">🕒 ${it.timeDisplay} • 📍 ${displayRoom(it.room, dayIdx)} • 👤 ${it.professor || '—'}</span></div>
-      <span class="status-pill ${status}">${label}</span>
-    </div>`;
+    return `<div class="today-overview-item"><div><strong>${it.subject || it.name}</strong> — ${it.section}<br><span style="font-size:0.8rem; color:var(--text-muted);">🕒 ${it.timeDisplay} • 📍 ${displayRoom(it.room, dayIdx)} • 👤 ${it.professor || '—'}</span></div><span class="status-pill ${status}">${label}</span></div>`;
   }).join('');
 }
-
 async function renderRecentActivities() {
   const container = document.getElementById("admin-recent-activities");
   if (!container) return;
@@ -1272,37 +1252,28 @@ window.openRoomAvailabilityModal = function () { document.getElementById("room-a
 window.closeRoomAvailabilityModal = function () { document.getElementById("room-avail-modal-overlay").classList.remove("open"); };
 window.checkRoomAvailability = function () {
   const dayIdx = parseInt(document.getElementById("avail-day").value, 10);
-  const startStr = document.getElementById("avail-start").value; // "HH:MM"
-  const endStr = document.getElementById("avail-end").value;
+  const startStr = document.getElementById("avail-start").value, endStr = document.getElementById("avail-end").value;
   if (!startStr || !endStr) { alert("Please set both start and end time."); return; }
-  const [sh, sm] = startStr.split(":").map(Number);
-  const [eh, em] = endStr.split(":").map(Number);
+  const [sh, sm] = startStr.split(":").map(Number), [eh, em] = endStr.split(":").map(Number);
   const startMin = sh * 60 + sm, endMin = eh * 60 + em;
   if (endMin <= startMin) { alert("End time must be after start time."); return; }
-
   const bookings = collectRoomBookings(null, null).filter(b => b.dayIdx === dayIdx && b.room && b.room !== "tba" && b.room !== "online");
   const allRooms = new Set(bookings.map(b => b.room));
   const results = document.getElementById("room-avail-results");
   let html = "";
-
   allRooms.forEach(room => {
     const clash = bookings.find(b => b.room === room && startMin < b.endMin && endMin > b.startMin);
-    if (clash) {
-      html += `<div class="avail-room-row occupied">❌ ${room.toUpperCase()} — ${clash.sectionCode} (${clash.subject}) ${clash.slotDisplay}</div>`;
-    } else {
-      html += `<div class="avail-room-row available">✅ ${room.toUpperCase()} — Available</div>`;
-    }
+    html += clash
+      ? `<div class="avail-room-row occupied">❌ ${room.toUpperCase()} — ${clash.sectionCode} (${clash.subject}) ${clash.slotDisplay}</div>`
+      : `<div class="avail-room-row available">✅ ${room.toUpperCase()} — Available</div>`;
   });
-
   results.innerHTML = html || `<p style="color:var(--text-muted);">No rooms found in schedule data.</p>`;
 };
 
-// ---- Manage Teachers / Subjects (read-only) ----
+// ---- Manage Teachers / Subjects ----
 window.openManageTeachersModal = function () {
   const teacherMap = {};
-  sectionsData.forEach(sec => Object.values(sec.cells || {}).forEach(c => {
-    if (c?.professor?.trim()) { const key = c.professor.trim(); teacherMap[key] = (teacherMap[key] || 0) + 1; }
-  }));
+  sectionsData.forEach(sec => Object.values(sec.cells || {}).forEach(c => { if (c?.professor?.trim()) { const key = c.professor.trim(); teacherMap[key] = (teacherMap[key] || 0) + 1; } }));
   const list = document.getElementById("manage-teachers-list");
   const entries = Object.entries(teacherMap).sort((a, b) => a[0].localeCompare(b[0]));
   list.innerHTML = entries.length ? entries.map(([name, count]) => `<div class="today-overview-item"><span>${name}</span><span style="color:var(--text-muted); font-size:0.8rem;">${count} class(es)</span></div>`).join('') : '<p style="color:var(--text-muted);">No teachers found.</p>';
@@ -1310,10 +1281,7 @@ window.openManageTeachersModal = function () {
 };
 window.openManageSubjectsModal = function () {
   const subjectMap = {};
-  sectionsData.forEach(sec => Object.values(sec.cells || {}).forEach(c => {
-    const s = (c?.subject || c?.name || "").trim();
-    if (s) subjectMap[s] = (subjectMap[s] || 0) + 1;
-  }));
+  sectionsData.forEach(sec => Object.values(sec.cells || {}).forEach(c => { const s = (c?.subject || c?.name || "").trim(); if (s) subjectMap[s] = (subjectMap[s] || 0) + 1; }));
   const list = document.getElementById("manage-subjects-list");
   const entries = Object.entries(subjectMap).sort((a, b) => a[0].localeCompare(b[0]));
   list.innerHTML = entries.length ? entries.map(([name, count]) => `<div class="today-overview-item"><span>${name}</span><span style="color:var(--text-muted); font-size:0.8rem;">${count} section(s)</span></div>`).join('') : '<p style="color:var(--text-muted);">No subjects found.</p>';
@@ -1330,6 +1298,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initSearchDropdown();
   updateNotificationButtons();
   renderBottomNav("home-view");
+  updateHamburgerContext("home-view");
   document.getElementById("admin-section-search-input")?.addEventListener("input", renderAdminSections);
   setInterval(() => { renderNextClassCard(); renderTeacherNextClassCard(); }, 30000);
 });
