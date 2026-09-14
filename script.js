@@ -41,12 +41,11 @@ function minutesToDisplay12(t) {
   const period = h24 >= 12 ? "PM" : "AM", h12 = h24 % 12 || 12;
   return `${h12}:${String(min).padStart(2, '0')} ${period}`;
 }
-// Classes in this school never span past midnight. If an end time is not
-// strictly after the start time, that means the slot's AM/PM was entered
-// incorrectly (e.g. "11:00 AM - 12:00 AM" when "12:00 PM" was meant). We now
-// treat that as an invalid/unparseable slot instead of wrapping it into the
-// next day — the old wrap-around turned a 1-hour typo into a false ~13-hour
-// booking, which caused a flood of false room/teacher conflicts.
+// Classes never span past midnight here. If an end time isn't strictly after
+// the start, the slot's AM/PM was mis-entered (e.g. "11:00 AM - 12:00 AM"
+// meant "12:00 PM"). Treated as invalid instead of wrapping to next day —
+// wrapping previously turned a 1-hour typo into a ~13-hour false booking
+// that caused a flood of false conflicts.
 function getSlotRangeMinutes(slotStr) {
   if (!slotStr) return null;
   const parts = slotStr.split("-").map(s => s.trim());
@@ -63,7 +62,7 @@ function getSlotRangeMinutes(slotStr) {
 function getSlotStartMinutes(slotStr) { const r = getSlotRangeMinutes(slotStr); return r ? r.startMin % 1440 : null; }
 function formatTimeRangeDisplay(slotStr) {
   const r = getSlotRangeMinutes(slotStr);
-  if (!r) return slotStr; // show the raw (possibly broken) text unchanged so it's visible for the admin to fix
+  if (!r) return slotStr;
   return `${minutesToDisplay12(r.startMin % 1440)} - ${minutesToDisplay12(r.endMin % 1440)}`;
 }
 function getDefaultSlotsForSession(session = "MORNING") {
@@ -267,7 +266,7 @@ function renderStudentTodayList() {
 
   const items = [];
   Object.keys(sec.cells).forEach(key => {
-    const [rStr, cStr] = key.split("-"); // row (slot index) - col (day index)
+    const [rStr, cStr] = key.split("-"); // row = slot index, col = day index
     if (parseInt(cStr, 10) !== dayIdx) return;
     const cell = sec.cells[key];
     const range = getSlotRangeMinutes(sec.slots[parseInt(rStr, 10)]);
@@ -531,7 +530,7 @@ function addBookingsFromSection(sectionCode, slots, cells, bookings) {
     const [rStr, cStr] = key.split("-");
     const dayIdx = parseInt(cStr, 10);
     const range = getSlotRangeMinutes(slots[parseInt(rStr, 10)]);
-    if (!range) return; // invalid slot skipped from conflict checks entirely
+    if (!range) return;
     bookings.push({ sectionCode, dayIdx, room: (cell.room || "").trim().toLowerCase(), professor: (cell.professor || "").trim().toLowerCase(),
       startMin: range.startMin, endMin: range.endMin, subject: cell.subject || cell.name || "", slotDisplay: formatTimeRangeDisplay(slots[parseInt(rStr, 10)]) });
   });
@@ -804,10 +803,6 @@ function renderSections() {
 
 // ==========================================
 // NEXT CLASS CARDS
-// FIX: key format is "slotIndex-dayIndex" everywhere in this app (same as
-// renderSections / renderStudentTodayList). These two functions were
-// previously destructuring it backwards as "dayIndex-slotIndex", causing
-// them to compare the wrong values and pull the wrong class entirely.
 // ==========================================
 function renderNextClassCard() {
   const container = document.getElementById("next-class-container");
@@ -984,8 +979,7 @@ function updateNotificationButtons() {
 }
 
 // ==========================================
-// REPORTS — now routed into the Admin's own Notification Center
-// instead of a separate always-visible page section.
+// REPORTS — routed into Admin's own Notification Center
 // ==========================================
 window.openReportModal = function () {
   const savedSection = localStorage.getItem("aics_student_section");
@@ -1009,7 +1003,6 @@ window.submitRoomReport = async function () {
       .select().single();
     if (error) { alert("Failed to submit report: " + error.message); return; }
 
-    // Route the report into the Admin's Notification Center
     await db.from("notifications").insert([{
       recipient_type: "admin", recipient_value: "admin",
       title: "🚩 New Report Received",
@@ -1027,7 +1020,7 @@ window.updateReportStatus = async function (id, newStatus) {
 };
 
 // ==========================================
-// ANNOUNCEMENTS
+// ANNOUNCEMENTS — now push in-app + FCM to the right audience
 // ==========================================
 window.openAnnouncementModal = function () { document.getElementById("announcement-modal-overlay").classList.add("open"); };
 window.closeAnnouncementModal = function () { document.getElementById("announcement-modal-overlay").classList.remove("open"); };
@@ -1047,9 +1040,33 @@ window.submitAnnouncement = async function () {
   const endDate = document.getElementById("ann-end-date")?.value || null;
   if (!title || !content) { alert("Please fill in title and message."); return; }
   if (targetType !== "all" && !targetValue) { alert("Please specify the target."); return; }
+
   try {
-    const { error } = await db.from("announcements").insert([{ title, content, type, priority, target_type: targetType, target_value: targetType === "all" ? null : targetValue, start_date: startDate, end_date: endDate, created_by: "admin" }]);
+    const { error } = await db.from("announcements").insert([{
+      title, content, type, priority, target_type: targetType,
+      target_value: targetType === "all" ? null : targetValue,
+      start_date: startDate, end_date: endDate, created_by: "admin"
+    }]);
+    // The Supabase trigger (on_announcement_created) handles the FCM push
+    // automatically once this row is inserted — no client call needed here.
     if (error) { alert("Failed: " + error.message); return; }
+
+    // In-app notification: "all" broadcasts to every section AND every
+    // teacher via recipient_value = 'ALL'; targeted announcements go
+    // straight to that one section or teacher.
+    const notifTitle = `📢 ${title}`;
+    if (targetType === "all") {
+      await db.from("notifications").insert([
+        { recipient_type: "section", recipient_value: "ALL", title: notifTitle, message: content, notif_type: "announcement", is_read: false },
+        { recipient_type: "teacher", recipient_value: "ALL", title: notifTitle, message: content, notif_type: "announcement", is_read: false }
+      ]);
+    } else {
+      await db.from("notifications").insert([{
+        recipient_type: targetType, recipient_value: targetValue,
+        title: notifTitle, message: content, notif_type: "announcement", is_read: false
+      }]);
+    }
+
     await db.from("schedule_history").insert([{ section_code: targetType === "section" ? targetValue : "SYSTEM", action: "announcement posted", changed_by: "admin", new_data: { title } }]);
     alert("Announcement posted!");
     document.getElementById("ann-title").value = ""; document.getElementById("ann-content").value = ""; document.getElementById("ann-target-value").value = "";
@@ -1091,7 +1108,8 @@ async function renderAnnouncementBanner(containerId, recipientType, recipientVal
 }
 
 // ==========================================
-// NOTIFICATION CENTER (now includes 'admin' identity for report alerts)
+// NOTIFICATION CENTER — includes 'admin' identity for reports,
+// and broadcast ('ALL') rows for announcements sent to everyone.
 // ==========================================
 function getCurrentNotifIdentity() {
   const activeView = document.querySelector(".view.active")?.id;
@@ -1107,7 +1125,10 @@ window.openNotificationCenter = async function () {
   document.getElementById("hamburger-menu")?.classList.remove("active");
   if (!identity) { list.innerHTML = `<div class="notif-empty">Log in to a portal to view notifications.</div>`; overlay.classList.add("open"); return; }
   try {
-    const { data, error } = await db.from("notifications").select("*").eq("recipient_type", identity.type).eq("recipient_value", identity.value).order("created_at", { ascending: false }).limit(50);
+    const { data, error } = await db.from("notifications").select("*")
+      .eq("recipient_type", identity.type)
+      .or(`recipient_value.eq.${identity.value},recipient_value.eq.ALL`)
+      .order("created_at", { ascending: false }).limit(50);
     if (error || !data?.length) { list.innerHTML = `<div class="notif-empty">No notifications yet.</div>`; overlay.classList.add("open"); return; }
     list.innerHTML = data.map(n => {
       const reportControls = (n.notif_type === 'report' && n.related_id) ? `
@@ -1136,7 +1157,14 @@ window.markNotificationRead = async function (id) {
 window.markAllNotificationsRead = async function () {
   const identity = getCurrentNotifIdentity();
   if (!identity) return;
-  try { await db.from("notifications").update({ is_read: true }).eq("recipient_type", identity.type).eq("recipient_value", identity.value).eq("is_read", false); openNotificationCenter(); refreshNotificationBadge(); } catch (err) { console.error(err); }
+  try {
+    await db.from("notifications").update({ is_read: true })
+      .eq("recipient_type", identity.type)
+      .or(`recipient_value.eq.${identity.value},recipient_value.eq.ALL`)
+      .eq("is_read", false);
+    openNotificationCenter();
+    refreshNotificationBadge();
+  } catch (err) { console.error(err); }
 };
 window.deleteNotification = async function (id) {
   try { await db.from("notifications").delete().eq("id", id); document.getElementById(`notif-row-${id}`)?.remove(); refreshNotificationBadge(); } catch (err) { console.error(err); }
@@ -1147,7 +1175,10 @@ async function refreshNotificationBadge() {
   if (!badge) return;
   if (!identity) { badge.style.display = "none"; return; }
   try {
-    const { count, error } = await db.from("notifications").select("id", { count: "exact", head: true }).eq("recipient_type", identity.type).eq("recipient_value", identity.value).eq("is_read", false);
+    const { count, error } = await db.from("notifications").select("id", { count: "exact", head: true })
+      .eq("recipient_type", identity.type)
+      .or(`recipient_value.eq.${identity.value},recipient_value.eq.ALL`)
+      .eq("is_read", false);
     if (error || !count) { badge.style.display = "none"; return; }
     badge.textContent = count > 99 ? "99+" : String(count);
     badge.style.display = "flex";
