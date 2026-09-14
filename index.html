@@ -184,13 +184,12 @@
         <div class="quick-actions-grid">
           <button class="quick-action-btn" onclick="openAddSectionModal()">➕ Add Schedule</button>
           <button class="quick-action-btn" onclick="openRoomAvailabilityModal()">🏫 Check Room Availability</button>
+          <button class="quick-action-btn" onclick="openTodayOverviewModal()">📅 Today's Schedule Overview</button>
           <button class="quick-action-btn" onclick="openAnnouncementModal()">📢 Create Announcement</button>
+          <button class="quick-action-btn" onclick="openAnnouncementsListModal()">📋 View Announcements</button>
           <button class="quick-action-btn" onclick="openManageTeachersModal()">👨‍🏫 Manage Teachers</button>
           <button class="quick-action-btn" onclick="openManageSubjectsModal()">📚 Manage Subjects</button>
         </div>
-
-        <div style="margin: 24px 0 12px;"><h3 style="font-size:1.1rem; font-weight:800;">📅 Today's Schedule Overview</h3></div>
-        <div id="admin-today-overview"></div>
 
         <div style="margin: 24px 0 12px;"><h3 style="font-size:1.1rem; font-weight:800;">🕒 Recent Activities</h3></div>
         <div id="admin-recent-activities"></div>
@@ -207,17 +206,6 @@
           </div>
         </div>
         <div id="admin-sections-list"></div>
-
-        <div class="schedule-header" style="margin: 28px 0 12px;">
-          <div><h1 class="schedule-title" style="font-size:1.2rem;">📢 ANNOUNCEMENTS</h1></div>
-          <button class="btn-primary" onclick="openAnnouncementModal()">📢 Create Announcement</button>
-        </div>
-        <div id="admin-announcements-list"></div>
-
-        <div class="schedule-header" style="margin: 28px 0 12px;">
-          <div><h1 class="schedule-title" style="font-size:1.2rem;">🚩 STUDENT REPORTS</h1></div>
-        </div>
-        <div id="admin-reports-list"></div>
       </div>
     </section>
   </main>
@@ -303,7 +291,7 @@
     </div>
   </div>
 
-  <!-- Announcement Modal -->
+  <!-- Announcement Create Modal -->
   <div class="overlay" id="announcement-modal-overlay" aria-hidden="true">
     <div class="modal" role="dialog" aria-modal="true">
       <h3 style="margin-top:0; font-size:1.25rem; font-weight:800;">📢 Create Announcement</h3>
@@ -338,6 +326,15 @@
           <button class="btn-secondary" style="flex:1;" onclick="closeAnnouncementModal()">Cancel</button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Announcements List Modal (view/delete existing) -->
+  <div class="overlay" id="announcements-list-modal-overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true">
+      <h3 style="margin-top:0; font-size:1.25rem; font-weight:800;">📋 Announcements</h3>
+      <div id="admin-announcements-list" style="max-height:55vh; overflow-y:auto;"></div>
+      <button class="details-close-btn" onclick="document.getElementById('announcements-list-modal-overlay').classList.remove('open')">Close</button>
     </div>
   </div>
 
@@ -387,6 +384,15 @@
       <h3 style="margin-top:0; font-size:1.25rem; font-weight:800;">⚠️ Conflict Details</h3>
       <div id="conflict-details-list" style="max-height:55vh; overflow-y:auto;"></div>
       <button class="details-close-btn" onclick="document.getElementById('conflict-details-modal-overlay').classList.remove('open')">Close</button>
+    </div>
+  </div>
+
+  <!-- Today's Schedule Overview Modal -->
+  <div class="overlay" id="today-overview-modal-overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true">
+      <h3 style="margin-top:0; font-size:1.25rem; font-weight:800;">📅 Today's Schedule Overview</h3>
+      <div id="today-overview-modal-list" style="max-height:55vh; overflow-y:auto;"></div>
+      <button class="details-close-btn" onclick="document.getElementById('today-overview-modal-overlay').classList.remove('open')">Close</button>
     </div>
   </div>
 
