@@ -41,20 +41,29 @@ function minutesToDisplay12(t) {
   const period = h24 >= 12 ? "PM" : "AM", h12 = h24 % 12 || 12;
   return `${h12}:${String(min).padStart(2, '0')} ${period}`;
 }
+// Classes in this school never span past midnight. If an end time is not
+// strictly after the start time, that means the slot's AM/PM was entered
+// incorrectly (e.g. "11:00 AM - 12:00 AM" when "12:00 PM" was meant). We now
+// treat that as an invalid/unparseable slot instead of wrapping it into the
+// next day — the old wrap-around turned a 1-hour typo into a false ~13-hour
+// booking, which caused a flood of false room/teacher conflicts.
 function getSlotRangeMinutes(slotStr) {
   if (!slotStr) return null;
   const parts = slotStr.split("-").map(s => s.trim());
   if (parts.length !== 2) return null;
   const startMin = pieceToMinutes24(parts[0]);
-  let endMin = pieceToMinutes24(parts[1]);
+  const endMin = pieceToMinutes24(parts[1]);
   if (startMin === null || endMin === null) return null;
-  if (endMin <= startMin) endMin += 1440;
+  if (endMin <= startMin) {
+    console.warn(`Invalid time slot (end not after start), skipping: "${slotStr}"`);
+    return null;
+  }
   return { startMin, endMin };
 }
 function getSlotStartMinutes(slotStr) { const r = getSlotRangeMinutes(slotStr); return r ? r.startMin % 1440 : null; }
 function formatTimeRangeDisplay(slotStr) {
   const r = getSlotRangeMinutes(slotStr);
-  if (!r) return slotStr;
+  if (!r) return slotStr; // show the raw (possibly broken) text unchanged so it's visible for the admin to fix
   return `${minutesToDisplay12(r.startMin % 1440)} - ${minutesToDisplay12(r.endMin % 1440)}`;
 }
 function getDefaultSlotsForSession(session = "MORNING") {
@@ -123,7 +132,6 @@ window.toggleHamburger = function (e) {
   document.getElementById("hamburger-menu")?.classList.toggle("active");
 };
 
-// Shows/hides menu sections based on whether the user is actively logged into a portal.
 function updateHamburgerContext(viewId) {
   const studentLoggedIn = viewId === "student-view" && !!localStorage.getItem("aics_student_section") && !isViewingAllSections;
   const teacherLoggedIn = viewId === "teacher-view" && !!localStorage.getItem("aics_teacher_name");
@@ -136,7 +144,7 @@ function updateHamburgerContext(viewId) {
   if (reportItem) reportItem.style.display = adminLoggedIn ? "none" : (loggedInSomewhere ? "flex" : "none");
 
   const notifItem = document.getElementById("notif-nav-btn");
-  if (notifItem) notifItem.style.display = (studentLoggedIn || teacherLoggedIn) ? "flex" : "none";
+  if (notifItem) notifItem.style.display = (studentLoggedIn || teacherLoggedIn || adminLoggedIn) ? "flex" : "none";
 
   const logoutBtn = document.getElementById("context-logout-btn");
   const logoutDivider = document.getElementById("logout-divider");
@@ -259,7 +267,7 @@ function renderStudentTodayList() {
 
   const items = [];
   Object.keys(sec.cells).forEach(key => {
-    const [rStr, cStr] = key.split("-");
+    const [rStr, cStr] = key.split("-"); // row (slot index) - col (day index)
     if (parseInt(cStr, 10) !== dayIdx) return;
     const cell = sec.cells[key];
     const range = getSlotRangeMinutes(sec.slots[parseInt(rStr, 10)]);
@@ -330,7 +338,8 @@ function checkAdminAuth() {
   const mainContent = document.getElementById("admin-main-content");
   if (isAdmin && gateCard && mainContent) {
     gateCard.style.display = "none"; mainContent.style.display = "block";
-    renderAdminSections(); fetchAndRenderReports(); renderAdminAnnouncements(); renderAdminDashboard();
+    renderAdminSections(); renderAdminDashboard();
+    refreshNotificationBadge();
   } else if (gateCard && mainContent) {
     gateCard.style.display = "block"; mainContent.style.display = "none";
   }
@@ -522,7 +531,7 @@ function addBookingsFromSection(sectionCode, slots, cells, bookings) {
     const [rStr, cStr] = key.split("-");
     const dayIdx = parseInt(cStr, 10);
     const range = getSlotRangeMinutes(slots[parseInt(rStr, 10)]);
-    if (!range) return;
+    if (!range) return; // invalid slot skipped from conflict checks entirely
     bookings.push({ sectionCode, dayIdx, room: (cell.room || "").trim().toLowerCase(), professor: (cell.professor || "").trim().toLowerCase(),
       startMin: range.startMin, endMin: range.endMin, subject: cell.subject || cell.name || "", slotDisplay: formatTimeRangeDisplay(slots[parseInt(rStr, 10)]) });
   });
@@ -538,10 +547,6 @@ function collectRoomBookings(excludeIdentifier, override) {
   return bookings;
 }
 function timesOverlap(a, b) { return a.startMin < b.endMin && a.endMin > b.startMin; }
-
-// Deduped: each unique pair of bookings produces at most ONE room conflict entry
-// and ONE teacher conflict entry, instead of accumulating duplicates if the same
-// pair happens to be compared more than once.
 function findRoomConflicts(bookings) {
   const conflicts = [];
   const seenRoom = new Set(), seenTeacher = new Set();
@@ -549,21 +554,18 @@ function findRoomConflicts(bookings) {
     for (let j = i + 1; j < bookings.length; j++) {
       const a = bookings[i], b = bookings[j];
       if (a.sectionCode === b.sectionCode || a.dayIdx !== b.dayIdx || !timesOverlap(a, b)) continue;
-
       if (a.room && b.room && a.room === b.room && a.room !== "tba" && a.room !== "online") {
         const key = [a.sectionCode, b.sectionCode, a.dayIdx, a.room, a.startMin, b.startMin].sort().join('|');
         if (!seenRoom.has(key)) {
           seenRoom.add(key);
-          conflicts.push({ type: "room", sectionA: a.sectionCode, sectionB: b.sectionCode, room: a.room.toUpperCase(), day: DAYS_CLEAN[a.dayIdx],
-            message: `⚠️ Room Conflict\nRoom ${a.room.toUpperCase()} — ${a.sectionCode} (${a.subject}, ${a.slotDisplay}) overlaps ${b.sectionCode} (${b.subject}, ${b.slotDisplay}) on ${DAYS_CLEAN[a.dayIdx]}.` });
+          conflicts.push({ type: "room", message: `⚠️ Room Conflict\nRoom ${a.room.toUpperCase()} — ${a.sectionCode} (${a.subject}, ${a.slotDisplay}) overlaps ${b.sectionCode} (${b.subject}, ${b.slotDisplay}) on ${DAYS_CLEAN[a.dayIdx]}.` });
         }
       }
       if (a.professor && b.professor && a.professor === b.professor) {
         const key = [a.sectionCode, b.sectionCode, a.dayIdx, a.professor, a.startMin, b.startMin].sort().join('|');
         if (!seenTeacher.has(key)) {
           seenTeacher.add(key);
-          conflicts.push({ type: "teacher", sectionA: a.sectionCode, sectionB: b.sectionCode, teacher: a.professor, day: DAYS_CLEAN[a.dayIdx],
-            message: `⚠️ Teacher Conflict\n${a.professor.replace(/\b\w/g, c => c.toUpperCase())} — ${a.sectionCode} (${a.subject}, ${a.slotDisplay}) overlaps ${b.sectionCode} (${b.subject}, ${b.slotDisplay}) on ${DAYS_CLEAN[a.dayIdx]}.` });
+          conflicts.push({ type: "teacher", message: `⚠️ Teacher Conflict\n${a.professor.replace(/\b\w/g, c => c.toUpperCase())} — ${a.sectionCode} (${a.subject}, ${a.slotDisplay}) overlaps ${b.sectionCode} (${b.subject}, ${b.slotDisplay}) on ${DAYS_CLEAN[a.dayIdx]}.` });
         }
       }
     }
@@ -802,6 +804,10 @@ function renderSections() {
 
 // ==========================================
 // NEXT CLASS CARDS
+// FIX: key format is "slotIndex-dayIndex" everywhere in this app (same as
+// renderSections / renderStudentTodayList). These two functions were
+// previously destructuring it backwards as "dayIndex-slotIndex", causing
+// them to compare the wrong values and pull the wrong class entirely.
 // ==========================================
 function renderNextClassCard() {
   const container = document.getElementById("next-class-container");
@@ -815,13 +821,13 @@ function renderNextClassCard() {
   const minutesNow = getManilaMinutesNow();
   let best = null;
   Object.keys(sec.cells).forEach(key => {
-    const [dStr, sStr] = key.split("-");
-    if (parseInt(dStr, 10) !== dayIdx) return;
-    const startMinutes = getSlotStartMinutes(sec.slots[parseInt(sStr, 10)]);
+    const [rStr, cStr] = key.split("-"); // row = slot index, col = day index
+    if (parseInt(cStr, 10) !== dayIdx) return;
+    const startMinutes = getSlotStartMinutes(sec.slots[parseInt(rStr, 10)]);
     if (startMinutes === null) return;
     const diff = startMinutes - minutesNow;
     if (diff < 0) return;
-    if (!best || diff < best.diff) best = { diff, cell: sec.cells[key], slot: sec.slots[parseInt(sStr, 10)], dayIdx };
+    if (!best || diff < best.diff) best = { diff, cell: sec.cells[key], slot: sec.slots[parseInt(rStr, 10)], dayIdx };
   });
   if (!best) { container.innerHTML = `<div class="next-class-empty">No more classes today 🎉</div>`; return; }
   const h = Math.floor(best.diff / 60), m = best.diff % 60;
@@ -842,15 +848,15 @@ function renderTeacherNextClassCard() {
   sectionsData.forEach(sec => {
     if (!sec.cells || !sec.slots) return;
     Object.keys(sec.cells).forEach(key => {
-      const [dStr, sStr] = key.split("-");
-      if (parseInt(dStr, 10) !== dayIdx) return;
+      const [rStr, cStr] = key.split("-"); // row = slot index, col = day index
+      if (parseInt(cStr, 10) !== dayIdx) return;
       const cell = sec.cells[key];
       if (cell.professor?.trim().toLowerCase() !== selectedTeacher.toLowerCase()) return;
-      const startMinutes = getSlotStartMinutes(sec.slots[parseInt(sStr, 10)]);
+      const startMinutes = getSlotStartMinutes(sec.slots[parseInt(rStr, 10)]);
       if (startMinutes === null) return;
       const diff = startMinutes - minutesNow;
       if (diff < 0) return;
-      if (!best || diff < best.diff) best = { diff, cell, slot: sec.slots[parseInt(sStr, 10)], dayIdx, section: sec.code || sec.title };
+      if (!best || diff < best.diff) best = { diff, cell, slot: sec.slots[parseInt(rStr, 10)], dayIdx, section: sec.code || sec.title };
     });
   });
   if (!best) { container.innerHTML = `<div class="next-class-empty">No more classes today 🎉</div>`; return; }
@@ -978,7 +984,8 @@ function updateNotificationButtons() {
 }
 
 // ==========================================
-// REPORTS
+// REPORTS — now routed into the Admin's own Notification Center
+// instead of a separate always-visible page section.
 // ==========================================
 window.openReportModal = function () {
   const savedSection = localStorage.getItem("aics_student_section");
@@ -997,34 +1004,24 @@ window.submitRoomReport = async function () {
   const details = document.getElementById("report-details-input")?.value.trim() || "";
   if (!details) { alert("Please describe the issue."); return; }
   try {
-    const { error } = await db.from("room_reports").insert([{ section_code: section || null, room: room || issueType, day: day || null, time_slot: slot || null, details: `[${issueType}] ${details}`, status: "submitted", is_read: false }]);
+    const { data: inserted, error } = await db.from("room_reports")
+      .insert([{ section_code: section || null, room: room || issueType, day: day || null, time_slot: slot || null, details: `[${issueType}] ${details}`, status: "submitted", is_read: false }])
+      .select().single();
     if (error) { alert("Failed to submit report: " + error.message); return; }
+
+    // Route the report into the Admin's Notification Center
+    await db.from("notifications").insert([{
+      recipient_type: "admin", recipient_value: "admin",
+      title: "🚩 New Report Received",
+      message: `${section || 'Unknown section'} reported: [${issueType}] ${details}${room ? `\nRoom: ${room}` : ''}${day ? `\nDay: ${day}` : ''}${slot ? `\nTime: ${slot}` : ''}`,
+      notif_type: "report", related_id: inserted?.id || null, is_read: false
+    }]);
+
     alert("Report submitted! Admin has been notified.");
     closeReportModal();
     ["report-room-input","report-day-select","report-slot-input","report-details-input"].forEach(id => { const el = document.getElementById(id); if (el) el.value = ""; });
   } catch (err) { console.error(err); alert("Error submitting report."); }
 };
-async function fetchAndRenderReports() {
-  const container = document.getElementById("admin-reports-list");
-  if (!container) return;
-  try {
-    const { data, error } = await db.from("room_reports").select("*").order("created_at", { ascending: false });
-    if (error || !data?.length) { container.innerHTML = `<p style="color:var(--text-muted); padding:12px;">No reports submitted.</p>`; return; }
-    container.innerHTML = data.map(r => {
-      const status = (r.status === 'pending') ? 'submitted' : (r.status === 'dismissed' ? 'resolved' : r.status);
-      const badgeColor = status === 'resolved' ? 'var(--success)' : status === 'under_review' ? '#f59e0b' : 'var(--danger)';
-      return `<div class="report-item">
-        <div class="report-item-header"><span class="report-item-badge" style="background:${badgeColor};">${status.replace('_',' ')}</span>
-        <span class="report-item-meta">${r.section_code || 'Unknown'} • ${r.day || '—'} • ${r.time_slot || '—'}</span></div>
-        <div class="report-item-details"><strong>Room:</strong> ${r.room}${r.details ? `<br><strong>Details:</strong> ${r.details}` : ''}</div>
-        <div class="report-item-actions"><select class="report-status-select" onchange="updateReportStatus('${r.id}', this.value)">
-          <option value="submitted" ${status==='submitted'?'selected':''}>Submitted</option>
-          <option value="under_review" ${status==='under_review'?'selected':''}>Under Review</option>
-          <option value="resolved" ${status==='resolved'?'selected':''}>Resolved</option>
-        </select></div></div>`;
-    }).join('');
-  } catch (err) { console.error(err); }
-}
 window.updateReportStatus = async function (id, newStatus) {
   try { const { error } = await db.from("room_reports").update({ status: newStatus }).eq("id", id); if (error) alert("Failed: " + error.message); } catch (err) { console.error(err); }
 };
@@ -1034,6 +1031,7 @@ window.updateReportStatus = async function (id, newStatus) {
 // ==========================================
 window.openAnnouncementModal = function () { document.getElementById("announcement-modal-overlay").classList.add("open"); };
 window.closeAnnouncementModal = function () { document.getElementById("announcement-modal-overlay").classList.remove("open"); };
+window.openAnnouncementsListModal = function () { renderAdminAnnouncements(); document.getElementById("announcements-list-modal-overlay").classList.add("open"); };
 window.toggleAnnTargetValue = function () {
   const type = document.getElementById("ann-target-type").value;
   document.getElementById("ann-target-value-wrapper").style.display = (type === "all") ? "none" : "block";
@@ -1093,11 +1091,12 @@ async function renderAnnouncementBanner(containerId, recipientType, recipientVal
 }
 
 // ==========================================
-// NOTIFICATION CENTER
+// NOTIFICATION CENTER (now includes 'admin' identity for report alerts)
 // ==========================================
 function getCurrentNotifIdentity() {
   const activeView = document.querySelector(".view.active")?.id;
   if (activeView === "teacher-view") { const t = localStorage.getItem("aics_teacher_name"); return t ? { type: "teacher", value: t } : null; }
+  if (activeView === "admin-view" && localStorage.getItem("aics_admin_logged_in") === "true") return { type: "admin", value: "admin" };
   const s = localStorage.getItem("aics_student_section");
   return s ? { type: "section", value: s } : null;
 }
@@ -1106,15 +1105,23 @@ window.openNotificationCenter = async function () {
   const overlay = document.getElementById("notif-center-overlay");
   const list = document.getElementById("notif-center-list");
   document.getElementById("hamburger-menu")?.classList.remove("active");
-  if (!identity) { list.innerHTML = `<div class="notif-empty">Log in as a student or teacher to view notifications.</div>`; overlay.classList.add("open"); return; }
+  if (!identity) { list.innerHTML = `<div class="notif-empty">Log in to a portal to view notifications.</div>`; overlay.classList.add("open"); return; }
   try {
     const { data, error } = await db.from("notifications").select("*").eq("recipient_type", identity.type).eq("recipient_value", identity.value).order("created_at", { ascending: false }).limit(50);
     if (error || !data?.length) { list.innerHTML = `<div class="notif-empty">No notifications yet.</div>`; overlay.classList.add("open"); return; }
-    list.innerHTML = data.map(n => `<div class="notif-item ${n.is_read ? '' : 'unread'}" id="notif-row-${n.id}">
-      <div class="notif-item-header"><span class="notif-item-title">${n.title}</span><span class="notif-item-time">${timeAgo(n.created_at)}</span></div>
-      <div class="notif-item-message">${n.message}</div>
-      <div class="notif-item-actions">${!n.is_read ? `<button onclick="markNotificationRead('${n.id}')">Mark read</button>` : ''}<button onclick="deleteNotification('${n.id}')">Delete</button></div>
-    </div>`).join('');
+    list.innerHTML = data.map(n => {
+      const reportControls = (n.notif_type === 'report' && n.related_id) ? `
+        <select class="report-status-select" onchange="updateReportStatus('${n.related_id}', this.value)">
+          <option value="submitted">Submitted</option>
+          <option value="under_review">Under Review</option>
+          <option value="resolved">Resolved</option>
+        </select>` : '';
+      return `<div class="notif-item ${n.is_read ? '' : 'unread'}" id="notif-row-${n.id}">
+        <div class="notif-item-header"><span class="notif-item-title">${n.title}</span><span class="notif-item-time">${timeAgo(n.created_at)}</span></div>
+        <div class="notif-item-message">${n.message}</div>
+        <div class="notif-item-actions">${reportControls}${!n.is_read ? `<button onclick="markNotificationRead('${n.id}')">Mark read</button>` : ''}<button onclick="deleteNotification('${n.id}')">Delete</button></div>
+      </div>`;
+    }).join('');
     overlay.classList.add("open");
   } catch (err) { console.error(err); }
 };
@@ -1197,25 +1204,23 @@ async function renderAdminDashboard() {
     }
   }
 
-  renderTodayOverview();
   renderRecentActivities();
 }
 
 window.showConflictDetails = function () {
   const list = document.getElementById("conflict-details-list");
   if (!list) return;
-  if (!lastConflictList.length) { list.innerHTML = `<p style="color:var(--text-muted);">No conflicts found.</p>`; }
-  else {
-    list.innerHTML = lastConflictList.map(c => `<div class="conflict-detail-item">${c.message.replace(/\n/g, '<br>')}</div>`).join('');
-  }
+  list.innerHTML = lastConflictList.length
+    ? lastConflictList.map(c => `<div class="conflict-detail-item">${c.message.replace(/\n/g, '<br>')}</div>`).join('')
+    : `<p style="color:var(--text-muted);">No conflicts found.</p>`;
   document.getElementById("conflict-details-modal-overlay").classList.add("open");
 };
 
-function renderTodayOverview() {
-  const container = document.getElementById("admin-today-overview");
+window.openTodayOverviewModal = function () {
+  const container = document.getElementById("today-overview-modal-list");
   if (!container) return;
   const dayIdx = getManilaCellDayIndex();
-  if (dayIdx === null) { container.innerHTML = `<p style="color:var(--text-muted); padding:8px;">No classes today (weekend).</p>`; return; }
+  if (dayIdx === null) { container.innerHTML = `<p style="color:var(--text-muted); padding:8px;">No classes today (weekend).</p>`; document.getElementById("today-overview-modal-overlay").classList.add("open"); return; }
   const minutesNow = getManilaMinutesNow();
   const items = [];
   sectionsData.forEach(sec => {
@@ -1228,15 +1233,19 @@ function renderTodayOverview() {
       items.push({ ...cell, section: sec.code, startMin: range.startMin, timeDisplay: formatTimeRangeDisplay(sec.slots[parseInt(rStr, 10)]) });
     });
   });
-  if (!items.length) { container.innerHTML = `<p style="color:var(--text-muted); padding:8px;">No classes scheduled today.</p>`; return; }
-  items.sort((a, b) => a.startMin - b.startMin);
-  container.innerHTML = items.map(it => {
-    let status = "upcoming", label = "🟢 Upcoming";
-    if (minutesNow >= it.startMin && minutesNow < it.startMin + 60) { status = "ongoing"; label = "🔵 Ongoing"; }
-    else if (minutesNow >= it.startMin + 60) { status = "completed"; label = "⚪ Completed"; }
-    return `<div class="today-overview-item"><div><strong>${it.subject || it.name}</strong> — ${it.section}<br><span style="font-size:0.8rem; color:var(--text-muted);">🕒 ${it.timeDisplay} • 📍 ${displayRoom(it.room, dayIdx)} • 👤 ${it.professor || '—'}</span></div><span class="status-pill ${status}">${label}</span></div>`;
-  }).join('');
-}
+  if (!items.length) { container.innerHTML = `<p style="color:var(--text-muted); padding:8px;">No classes scheduled today.</p>`; }
+  else {
+    items.sort((a, b) => a.startMin - b.startMin);
+    container.innerHTML = items.map(it => {
+      let status = "upcoming", label = "🟢 Upcoming";
+      if (minutesNow >= it.startMin && minutesNow < it.startMin + 60) { status = "ongoing"; label = "🔵 Ongoing"; }
+      else if (minutesNow >= it.startMin + 60) { status = "completed"; label = "⚪ Completed"; }
+      return `<div class="today-overview-item"><div><strong>${it.subject || it.name}</strong> — ${it.section}<br><span style="font-size:0.8rem; color:var(--text-muted);">🕒 ${it.timeDisplay} • 📍 ${displayRoom(it.room, dayIdx)} • 👤 ${it.professor || '—'}</span></div><span class="status-pill ${status}">${label}</span></div>`;
+    }).join('');
+  }
+  document.getElementById("today-overview-modal-overlay").classList.add("open");
+};
+
 async function renderRecentActivities() {
   const container = document.getElementById("admin-recent-activities");
   if (!container) return;
