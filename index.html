@@ -183,7 +183,7 @@
 
         <div class="quick-actions-grid">
           <button class="quick-action-btn" onclick="openAddSectionModal()">➕ Add Schedule</button>
-          <button class="quick-action-btn" onclick="openRoomAvailabilityModal()">🏫 Check Room Availability</button>
+          <button class="quick-action-btn" onclick="openRoomManagementModal()">🏫 Manage Rooms</button>
           <button class="quick-action-btn" onclick="openTodayOverviewModal()">📅 Today's Schedule Overview</button>
           <button class="quick-action-btn" onclick="openAnnouncementModal()">📢 Create Announcement</button>
           <button class="quick-action-btn" onclick="openAnnouncementsListModal()">📋 View Announcements</button>
@@ -338,11 +338,31 @@
     </div>
   </div>
 
-  <!-- Room Availability Modal -->
+  <!-- Room Management Modal (room list + add/edit rooms + availability checker, all in one place) -->
   <div class="overlay" id="room-avail-modal-overlay" aria-hidden="true">
-    <div class="modal" role="dialog" aria-modal="true">
-      <h3 style="margin-top:0; font-size:1.25rem; font-weight:800;">🏫 Room Availability Checker</h3>
-      <div class="auth-form">
+    <div class="modal" role="dialog" aria-modal="true" style="max-width:480px;">
+      <h3 style="margin-top:0; margin-bottom:2px; font-size:1.25rem; font-weight:800;">🏫 Room Management</h3>
+      <p style="margin:0 0 14px; font-size:0.8rem; color:var(--text-muted);">Add rooms, check availability, and prevent scheduling conflicts.</p>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <strong style="font-size:0.9rem;">All Rooms</strong>
+        <button class="btn-secondary" style="padding:4px 10px; font-size:0.75rem;" onclick="const f=document.getElementById('room-add-form'); f.style.display = f.style.display === 'none' ? 'flex' : 'none';">+ Add Room</button>
+      </div>
+      <div id="room-add-form" class="auth-form" style="display:none; flex-direction:column; gap:8px; margin-bottom:12px; background:var(--input-bg); padding:10px; border-radius:var(--radius-md);">
+        <div><label for="new-room-name">Room Name/Number:</label><input type="text" id="new-room-name" placeholder="e.g. Room 204"></div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+          <div><label for="new-room-capacity">Capacity (optional):</label><input type="number" id="new-room-capacity" placeholder="e.g. 40" min="1"></div>
+          <div><label for="new-room-notes">Notes (optional):</label><input type="text" id="new-room-notes" placeholder="e.g. Has projector"></div>
+        </div>
+        <button class="btn-primary" onclick="addRoom()">Save Room</button>
+      </div>
+      <p id="room-mgmt-storage-note" style="display:none; font-size:0.72rem; color:var(--text-muted); margin:-4px 0 10px;">⚠️ No "rooms" table found in the database — rooms are being saved on this device only.</p>
+      <div id="room-mgmt-list" style="max-height:180px; overflow-y:auto; margin-bottom:16px; display:flex; flex-direction:column; gap:6px;"></div>
+
+      <hr style="border:none; border-top:1px solid var(--border-color); margin:14px 0;">
+
+      <strong style="font-size:0.9rem;">Check Availability</strong>
+      <div class="auth-form" style="margin-top:8px;">
         <div><label for="avail-day">Day:</label>
           <select id="avail-day">
             <option value="0">Monday</option><option value="1">Tuesday</option><option value="2">Wednesday</option>
@@ -355,8 +375,8 @@
         </div>
         <button class="btn-primary" onclick="checkRoomAvailability()">Check Availability</button>
         <div id="room-avail-results" style="margin-top:14px;"></div>
-        <button class="btn-secondary" onclick="closeRoomAvailabilityModal()">Close</button>
       </div>
+      <button class="btn-secondary" style="margin-top:16px; width:100%;" onclick="closeRoomAvailabilityModal()">Close</button>
     </div>
   </div>
 
