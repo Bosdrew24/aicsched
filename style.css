@@ -482,6 +482,11 @@ select option { background-color: var(--card-bg) !important; color: var(--text-m
 }
 
 .dropdown-item:hover, .suggestion-item:hover { background: var(--primary-light); color: var(--primary); }
+.room-picker-dropdown .dropdown-item { padding: 8px 10px; min-height: unset; font-size: 0.82rem; }
+.room-picker-dropdown .dropdown-item.occupied { cursor: not-allowed; color: var(--danger); opacity: 0.7; }
+.room-picker-dropdown .dropdown-item.occupied:hover { background: rgba(239,68,68,0.08); color: var(--danger); }
+.room-picker-dropdown .dropdown-item.room-picker-option:not(.occupied) { color: var(--success); }
+.room-picker-dropdown .dropdown-item.room-picker-option:not(.occupied):hover { background: rgba(16,185,129,0.1); color: var(--success-hover); }
 
 /* ==========================================================================
    9. SESSION FILTERS & SEGMENTED TABS
