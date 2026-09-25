@@ -11,6 +11,8 @@ let sectionsData = [];
 let allSections = [];
 let studentSubpanel = "home";
 let lastConflictList = [];
+let roomsData = [];
+let roomsTableAvailable = true;
 
 // ==========================================
 // THEME
@@ -107,6 +109,144 @@ function timeAgo(iso) {
   const hours = Math.floor(mins / 60);
   if (hours < 24) return `${hours}h ago`;
   return `${Math.floor(hours / 24)}d ago`;
+}
+
+// ==========================================
+// ROOMS DATA & AVAILABILITY ENGINE
+// ==========================================
+// Rooms are stored in an optional "rooms" table (name, capacity, notes, status).
+// If that table doesn't exist yet in Supabase, we fall back to a local list
+// (localStorage) so room management still works without any DB migration.
+async function loadRooms() {
+  try {
+    const { data, error } = await db.from("rooms").select("*").order("name");
+    if (error) throw error;
+    roomsData = data || [];
+    roomsTableAvailable = true;
+  } catch (err) {
+    roomsTableAvailable = false;
+    try { roomsData = JSON.parse(localStorage.getItem("aics_local_rooms") || "[]"); } catch { roomsData = []; }
+  }
+}
+function persistLocalRooms() { localStorage.setItem("aics_local_rooms", JSON.stringify(roomsData)); }
+
+// Full list of known room names: rooms explicitly added via Room Management,
+// plus any room string already used somewhere in the schedule data (so old
+// data keeps working even before an admin formally registers every room).
+function getAllKnownRoomNames() {
+  const set = new Set();
+  roomsData.forEach(r => { if (r.name?.trim() && r.status !== "inactive") set.add(r.name.trim()); });
+  sectionsData.forEach(sec => Object.values(sec.cells || {}).forEach(c => {
+    const r = (c?.room || "").trim();
+    if (r && r.toLowerCase() !== "tba" && r.toLowerCase() !== "online") set.add(r);
+  }));
+  return Array.from(set).sort((a, b) => a.localeCompare(b));
+}
+
+// For a given day + minute range, returns every known room marked available
+// or occupied (with the conflicting booking), reusing the same overlap logic
+// as the save-time conflict checker so results are always consistent.
+function getRoomAvailability(dayIdx, startMin, endMin, excludeIdentifier) {
+  const bookings = collectRoomBookings(excludeIdentifier, null)
+    .filter(b => b.dayIdx === dayIdx && b.room && b.room !== "tba" && b.room !== "online");
+  return getAllKnownRoomNames().map(name => {
+    const clash = bookings.find(b => b.room === name.toLowerCase() && startMin < b.endMin && endMin > b.startMin);
+    return { name, available: !clash, conflict: clash || null };
+  });
+}
+
+window.addRoom = async function () {
+  const nameInput = document.getElementById("new-room-name");
+  const capInput = document.getElementById("new-room-capacity");
+  const notesInput = document.getElementById("new-room-notes");
+  const name = nameInput?.value.trim();
+  if (!name) { alert("Please enter a room name/number."); return; }
+  if (getAllKnownRoomNames().some(r => r.toLowerCase() === name.toLowerCase())) { alert("That room already exists."); return; }
+  const capacity = capInput?.value ? parseInt(capInput.value, 10) : null;
+  const notes = notesInput?.value.trim() || null;
+  if (roomsTableAvailable) {
+    try {
+      const { error } = await db.from("rooms").insert([{ name, capacity, notes, status: "active" }]);
+      if (error) throw error;
+      await loadRooms();
+    } catch (err) {
+      console.error(err);
+      roomsTableAvailable = false;
+      roomsData.push({ id: crypto.randomUUID(), name, capacity, notes, status: "active" });
+      persistLocalRooms();
+    }
+  } else {
+    roomsData.push({ id: crypto.randomUUID(), name, capacity, notes, status: "active" });
+    persistLocalRooms();
+  }
+  nameInput.value = ""; if (capInput) capInput.value = ""; if (notesInput) notesInput.value = "";
+  renderRoomManagement();
+};
+window.setRoomStatus = async function (identifier, status) {
+  if (roomsTableAvailable) {
+    try { const { error } = await db.from("rooms").update({ status }).eq("id", identifier); if (error) throw error; await loadRooms(); }
+    catch (err) { console.error(err); }
+  } else {
+    const r = roomsData.find(r => r.id === identifier); if (r) { r.status = status; persistLocalRooms(); }
+  }
+  renderRoomManagement();
+};
+window.deleteRoom = async function (identifier, name) {
+  if (!confirm(`Remove "${name}" from the room list? (Classes already scheduled in this room are not affected.)`)) return;
+  if (roomsTableAvailable) {
+    try { const { error } = await db.from("rooms").delete().eq("id", identifier); if (error) throw error; await loadRooms(); }
+    catch (err) { console.error(err); }
+  } else {
+    roomsData = roomsData.filter(r => r.id !== identifier); persistLocalRooms();
+  }
+  renderRoomManagement();
+};
+
+// ==========================================
+// SMART ROOM PICKER (searchable + availability-aware dropdown)
+// Used wherever a room needs to be entered: the section editor grid and the
+// simplified "Add Class Entry" popup.
+// ==========================================
+function closeRoomPickerDropdown() { document.querySelectorAll(".room-picker-dropdown").forEach(d => d.remove()); }
+function wireRoomPicker(input, getContext) {
+  if (!input) return;
+  input.setAttribute("autocomplete", "off");
+  input.addEventListener("focus", () => showRoomPickerDropdown(input, getContext));
+  input.addEventListener("input", () => showRoomPickerDropdown(input, getContext));
+  input.addEventListener("blur", () => setTimeout(closeRoomPickerDropdown, 150));
+}
+function showRoomPickerDropdown(input, getContext) {
+  closeRoomPickerDropdown();
+  const { dayIdx, slotStr, excludeIdentifier } = getContext();
+  const range = getSlotRangeMinutes(slotStr);
+  const query = input.value.trim().toLowerCase();
+  const dropdown = document.createElement("div");
+  dropdown.className = "chrome-dropdown active room-picker-dropdown";
+  dropdown.style.cssText = "position:fixed; z-index:10600; max-height:220px; overflow-y:auto;";
+  if (!range) {
+    dropdown.innerHTML = `<div class="dropdown-item" style="opacity:0.6; cursor:default;">Set a valid day &amp; time first</div>`;
+  } else {
+    let results = getRoomAvailability(dayIdx, range.startMin, range.endMin, excludeIdentifier);
+    if (query) results = results.filter(r => r.name.toLowerCase().includes(query));
+    results.sort((a, b) => (a.available === b.available) ? a.name.localeCompare(b.name) : (a.available ? -1 : 1));
+    dropdown.innerHTML = results.length ? results.slice(0, 30).map(r => r.available
+      ? `<div class="dropdown-item room-picker-option" data-room="${r.name.replace(/"/g, '&quot;')}">✅&nbsp;<span>${r.name.toUpperCase()}</span></div>`
+      : `<div class="dropdown-item room-picker-option occupied" title="Occupied by ${r.conflict.sectionCode} (${r.conflict.subject}) ${r.conflict.slotDisplay}">❌&nbsp;<span>${r.name.toUpperCase()}</span>&nbsp;<small style="opacity:0.75;">— ${r.conflict.sectionCode}</small></div>`
+    ).join('') : `<div class="dropdown-item" style="opacity:0.6; cursor:default;">No matching rooms — try Manage Rooms to add one</div>`;
+  }
+  const rect = input.getBoundingClientRect();
+  dropdown.style.left = rect.left + "px";
+  dropdown.style.top = (rect.bottom + 2) + "px";
+  dropdown.style.width = Math.max(rect.width, 190) + "px";
+  document.body.appendChild(dropdown);
+  dropdown.querySelectorAll(".room-picker-option:not(.occupied)").forEach(opt => {
+    opt.addEventListener("mousedown", e => {
+      e.preventDefault();
+      input.value = opt.dataset.room;
+      closeRoomPickerDropdown();
+      input.dispatchEvent(new Event("change"));
+    });
+  });
 }
 
 // ==========================================
@@ -405,7 +545,11 @@ window.addNewSection = async function () {
     document.getElementById("new-section-code").value = ""; document.getElementById("new-section-title").value = "";
     closeAddSectionModal();
     await window.loadSchedules();
-    alert("Section created successfully!");
+    // Jump straight into the editor with the guided "Add Class Entry" popup
+    // open, so the admin's flow is: Add Section -> Day -> Time -> Subject ->
+    // Available Room -> Save, without extra manual navigation.
+    editSection(newSec.id);
+    openAddClassEntryModal();
   } catch (err) { console.error(err); }
 };
 window.deleteSection = async function (identifier) {
@@ -424,6 +568,8 @@ window.deleteSection = async function (identifier) {
 window.addEditorRow = function () {
   const tbody = document.getElementById("admin-edit-table-body");
   if (!tbody) return;
+  const modal = document.getElementById("admin-edit-section-modal");
+  const excludeIdentifier = modal?.dataset.sectionIdentifier;
   const currentSession = document.getElementById("edit-sec-session")?.value || "MORNING";
   const rows = tbody.querySelectorAll("tr");
   let lastSlotVal = "";
@@ -437,14 +583,26 @@ window.addEditorRow = function () {
     html += `<td class="edit-day-cell" style="${bg} border:1px solid var(--border-color); padding:4px; vertical-align:top; min-width:140px;">
       <input type="text" class="edit-sub-input" placeholder="Sub Code" style="width:100%; border:none; background:transparent; font-weight:bold; color:var(--text-main); font-size:0.75rem; text-align:center; padding:1px 0; outline:none; box-sizing:border-box;">
       <input type="text" class="edit-prof-input" placeholder="Teacher" style="width:100%; border:none; background:transparent; color:var(--text-muted); font-size:0.7rem; text-align:center; padding:1px 0; outline:none; box-sizing:border-box;">
-      <input type="text" class="edit-room-input" placeholder="Room" style="width:100%; border:none; background:transparent; color:var(--primary); font-size:0.68rem; font-weight:600; text-align:center; padding:1px 0; outline:none; box-sizing:border-box;">
+      <input type="text" class="edit-room-input" placeholder="Search room..." autocomplete="off" style="width:100%; border:none; background:transparent; color:var(--primary); font-size:0.68rem; font-weight:600; text-align:center; padding:1px 0; outline:none; box-sizing:border-box;">
     </td>`;
   });
   html += `<td style="background:var(--card-bg); border:1px solid var(--border-color); text-align:center; vertical-align:middle; padding:2px; min-width:44px;">
     <button type="button" onclick="deleteEditorRow(this)" style="background:var(--danger); color:#fff; border:none; width:24px; height:24px; border-radius:4px; font-weight:bold; cursor:pointer;">&times;</button></td>`;
   tr.innerHTML = html; tbody.appendChild(tr);
+  wireRowRoomPickers(tr, excludeIdentifier);
+  return tr;
 };
 window.deleteEditorRow = function (btn) { btn.closest("tr")?.remove(); };
+// Attaches the smart room picker to every room field in a row, reading that
+// row's own time slot and column's day index live (so it always reflects
+// whatever is currently typed, without needing to be rewired on edit).
+function wireRowRoomPickers(tr, excludeIdentifier) {
+  const slotInput = tr.querySelector(".edit-slot-input");
+  tr.querySelectorAll(".edit-day-cell").forEach((cell, c) => {
+    const roomInput = cell.querySelector(".edit-room-input");
+    wireRoomPicker(roomInput, () => ({ dayIdx: c, slotStr: slotInput?.value || "", excludeIdentifier }));
+  });
+}
 
 // ==========================================
 // SECTION EDIT MODAL
@@ -493,8 +651,9 @@ window.editSection = function (identifier) {
             <option value="EVENING" ${currentSession === 'EVENING' ? 'selected' : ''}>EVENING</option>
           </select>
         </div>
-        <div style="display:flex; gap:10px;">
-          <button type="button" class="btn-success" onclick="addEditorRow()" style="padding:7px 14px; font-size:0.85rem;">+ Add Row</button>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button type="button" class="btn-primary" onclick="openAddClassEntryModal()" style="padding:7px 14px; font-size:0.85rem;">➕ Add Class Entry</button>
+          <button type="button" class="btn-success" onclick="addEditorRow()" style="padding:7px 14px; font-size:0.85rem;">+ Add Row (Manual)</button>
           <button class="btn-danger" onclick="document.getElementById('admin-edit-section-modal').remove()" style="padding:7px 14px; font-size:0.85rem;">&times; Close</button>
         </div>
       </div>
@@ -520,7 +679,9 @@ window.editSection = function (identifier) {
         </div>
       </div>
     </div>`;
+  modal.dataset.sectionIdentifier = String(sec.id || sec.code);
   document.body.appendChild(modal);
+  modal.querySelectorAll("#admin-edit-table-body tr").forEach(tr => wireRowRoomPickers(tr, modal.dataset.sectionIdentifier));
 };
 
 // ---- Conflict detection (with dedupe) ----
@@ -548,11 +709,22 @@ function collectRoomBookings(excludeIdentifier, override) {
 function timesOverlap(a, b) { return a.startMin < b.endMin && a.endMin > b.startMin; }
 function findRoomConflicts(bookings) {
   const conflicts = [];
-  const seenRoom = new Set(), seenTeacher = new Set();
+  const seenRoom = new Set(), seenTeacher = new Set(), seenSection = new Set();
   for (let i = 0; i < bookings.length; i++) {
     for (let j = i + 1; j < bookings.length; j++) {
       const a = bookings[i], b = bookings[j];
-      if (a.sectionCode === b.sectionCode || a.dayIdx !== b.dayIdx || !timesOverlap(a, b)) continue;
+      if (a.dayIdx !== b.dayIdx || !timesOverlap(a, b)) continue;
+      // Same section double-booked into two overlapping time blocks on the
+      // same day (e.g. two different rows both filled for Monday that
+      // overlap) — students in that section can't be in two classes at once.
+      if (a.sectionCode === b.sectionCode) {
+        const key = [a.sectionCode, a.dayIdx, a.startMin, b.startMin].sort().join('|');
+        if (!seenSection.has(key)) {
+          seenSection.add(key);
+          conflicts.push({ type: "section", message: `⚠️ Section Schedule Conflict\n${a.sectionCode} has two overlapping classes on ${DAYS_CLEAN[a.dayIdx]}: ${a.subject} (${a.slotDisplay}) and ${b.subject} (${b.slotDisplay}).` });
+        }
+        continue;
+      }
       if (a.room && b.room && a.room === b.room && a.room !== "tba" && a.room !== "online") {
         const key = [a.sectionCode, b.sectionCode, a.dayIdx, a.room, a.startMin, b.startMin].sort().join('|');
         if (!seenRoom.has(key)) {
@@ -1287,9 +1459,42 @@ async function renderRecentActivities() {
   } catch (err) { console.error(err); }
 }
 
-// ---- Room Availability Checker ----
-window.openRoomAvailabilityModal = function () { document.getElementById("room-avail-modal-overlay").classList.add("open"); };
+// ---- Room Management (list/add/edit rooms + Availability Checker, merged) ----
+window.openRoomManagementModal = function () {
+  renderRoomManagement();
+  document.getElementById("room-avail-results").innerHTML = "";
+  document.getElementById("room-avail-modal-overlay").classList.add("open");
+};
+window.openRoomAvailabilityModal = window.openRoomManagementModal; // back-compat alias
 window.closeRoomAvailabilityModal = function () { document.getElementById("room-avail-modal-overlay").classList.remove("open"); };
+
+function renderRoomManagement() {
+  const listEl = document.getElementById("room-mgmt-list");
+  if (!listEl) return;
+  const names = getAllKnownRoomNames();
+  const allBookings = collectRoomBookings(null, null);
+  if (!names.length) {
+    listEl.innerHTML = `<p style="color:var(--text-muted); padding:8px;">No rooms yet. Add one above.</p>`;
+  } else {
+    listEl.innerHTML = names.map(name => {
+      const record = roomsData.find(r => r.name?.toLowerCase() === name.toLowerCase());
+      const status = record?.status || "active";
+      const capacity = record?.capacity ? ` • Cap. ${record.capacity}` : "";
+      const usageCount = allBookings.filter(b => b.room === name.toLowerCase()).length;
+      return `<div class="today-overview-item">
+        <div><strong>${name.toUpperCase()}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">${usageCount} class(es) scheduled${capacity}</span></div>
+        <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
+          <span class="status-pill" style="background:${status === 'inactive' ? 'var(--danger)' : 'var(--success)'}; color:#fff;">${status === 'inactive' ? 'Inactive' : 'Active'}</span>
+          ${record ? `<button class="btn-secondary" style="padding:4px 8px; font-size:0.7rem;" onclick="setRoomStatus('${record.id}','${status === 'inactive' ? 'active' : 'inactive'}')">${status === 'inactive' ? 'Reactivate' : 'Deactivate'}</button>
+          <button class="btn-danger" style="padding:4px 8px; font-size:0.7rem;" onclick="deleteRoom('${record.id}','${name.replace(/'/g, "\\'")}')">Delete</button>` : `<span style="font-size:0.68rem; color:var(--text-muted);">from schedule data</span>`}
+        </div>
+      </div>`;
+    }).join('');
+  }
+  const note = document.getElementById("room-mgmt-storage-note");
+  if (note) note.style.display = roomsTableAvailable ? "none" : "block";
+}
+
 window.checkRoomAvailability = function () {
   const dayIdx = parseInt(document.getElementById("avail-day").value, 10);
   const startStr = document.getElementById("avail-start").value, endStr = document.getElementById("avail-end").value;
@@ -1297,48 +1502,120 @@ window.checkRoomAvailability = function () {
   const [sh, sm] = startStr.split(":").map(Number), [eh, em] = endStr.split(":").map(Number);
   const startMin = sh * 60 + sm, endMin = eh * 60 + em;
   if (endMin <= startMin) { alert("End time must be after start time."); return; }
-  const bookings = collectRoomBookings(null, null).filter(b => b.dayIdx === dayIdx && b.room && b.room !== "tba" && b.room !== "online");
-  const allRooms = new Set(bookings.map(b => b.room));
-  const results = document.getElementById("room-avail-results");
-  let html = "";
-  allRooms.forEach(room => {
-    const clash = bookings.find(b => b.room === room && startMin < b.endMin && endMin > b.startMin);
-    html += clash
-      ? `<div class="avail-room-row occupied">❌ ${room.toUpperCase()} — ${clash.sectionCode} (${clash.subject}) ${clash.slotDisplay}</div>`
-      : `<div class="avail-room-row available">✅ ${room.toUpperCase()} — Available</div>`;
+  const results = getRoomAvailability(dayIdx, startMin, endMin, null);
+  const container = document.getElementById("room-avail-results");
+  container.innerHTML = results.length ? results.map(r => r.available
+    ? `<div class="avail-room-row available">✅ ${r.name.toUpperCase()} — Available</div>`
+    : `<div class="avail-room-row occupied">❌ ${r.name.toUpperCase()} — ${r.conflict.sectionCode} (${r.conflict.subject}) ${r.conflict.slotDisplay}</div>`
+  ).join('') : `<p style="color:var(--text-muted);">No rooms found. Add rooms above.</p>`;
+};
+
+// ==========================================
+// SIMPLIFIED "ADD CLASS ENTRY" — Day + Time Range + Subject + Room in one
+// popup, instead of typing into individual grid cells. Writes straight into
+// the section editor's table, so the existing Save Changes / conflict-check
+// / history flow underneath is completely unchanged.
+// ==========================================
+function timeInputsToSlotStr(startStr, endStr) {
+  if (!startStr || !endStr) return "";
+  const [sh, sm] = startStr.split(":").map(Number), [eh, em] = endStr.split(":").map(Number);
+  return `${minutesToDisplay12(sh * 60 + sm)} - ${minutesToDisplay12(eh * 60 + em)}`;
+}
+window.openAddClassEntryModal = function () {
+  const parent = document.getElementById("admin-edit-section-modal");
+  if (!parent) return;
+  document.getElementById("class-entry-popup")?.remove();
+  const excludeIdentifier = parent.dataset.sectionIdentifier;
+  const popup = document.createElement("div");
+  popup.id = "class-entry-popup";
+  popup.style.cssText = `position: fixed; inset:0; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(6px); display:flex; align-items:center; justify-content:center; z-index:10500; padding:14px;`;
+  popup.innerHTML = `
+    <div style="background:var(--card-bg); border:1px solid var(--border-color); border-radius:var(--radius-xl); box-shadow:var(--shadow-modal); max-width:420px; width:100%; padding:20px; max-height:92vh; overflow-y:auto;">
+      <h3 style="margin:0 0 4px; font-size:1.1rem; font-weight:800;">➕ Add Class Entry</h3>
+      <p style="margin:0 0 16px; font-size:0.8rem; color:var(--text-muted);">One schedule block at a time — it's placed on the right day &amp; time automatically.</p>
+      <div class="auth-form">
+        <div><label for="ce-day">Day:</label>
+          <select id="ce-day">
+            <option value="0">Monday</option><option value="1">Tuesday</option><option value="2">Wednesday</option>
+            <option value="3">Thursday</option><option value="4">Friday ODL</option>
+          </select>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div><label for="ce-start">Start Time:</label><input type="time" id="ce-start" value="09:00"></div>
+          <div><label for="ce-end">End Time:</label><input type="time" id="ce-end" value="10:00"></div>
+        </div>
+        <div><label for="ce-subject">Subject Code:</label><input type="text" id="ce-subject" placeholder="e.g. CC213"></div>
+        <div><label for="ce-subname">Subject Name (optional):</label><input type="text" id="ce-subname" placeholder="e.g. Networking 2"></div>
+        <div><label for="ce-teacher">Teacher (optional):</label><input type="text" id="ce-teacher" placeholder="e.g. J. Muyot"></div>
+        <div><label for="ce-room">Room:</label><input type="text" id="ce-room" placeholder="Search available rooms..." autocomplete="off"></div>
+        <div style="display:flex; gap:10px; margin-top:4px;">
+          <button type="button" class="btn-primary" style="flex:1;" onclick="commitClassEntry()">Add to Schedule</button>
+          <button type="button" class="btn-secondary" style="flex:1;" onclick="document.getElementById('class-entry-popup').remove()">Cancel</button>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(popup);
+  const roomInput = document.getElementById("ce-room");
+  const getCtx = () => {
+    const dayIdx = parseInt(document.getElementById("ce-day").value, 10);
+    const s = document.getElementById("ce-start").value, e = document.getElementById("ce-end").value;
+    return { dayIdx, slotStr: timeInputsToSlotStr(s, e), excludeIdentifier };
+  };
+  wireRoomPicker(roomInput, getCtx);
+  ["ce-day", "ce-start", "ce-end"].forEach(id => document.getElementById(id).addEventListener("change", () => { roomInput.value = ""; }));
+};
+window.commitClassEntry = function () {
+  const parent = document.getElementById("admin-edit-section-modal");
+  if (!parent) return;
+  const excludeIdentifier = parent.dataset.sectionIdentifier;
+  const dayIdx = parseInt(document.getElementById("ce-day").value, 10);
+  const startStr = document.getElementById("ce-start").value, endStr = document.getElementById("ce-end").value;
+  const subjectCode = document.getElementById("ce-subject").value.trim();
+  const subjectName = document.getElementById("ce-subname").value.trim();
+  const teacher = document.getElementById("ce-teacher").value.trim();
+  const room = document.getElementById("ce-room").value.trim();
+  if (!startStr || !endStr) { alert("Please set start and end time."); return; }
+  const [sh, sm] = startStr.split(":").map(Number), [eh, em] = endStr.split(":").map(Number);
+  const startMin = sh * 60 + sm, endMin = eh * 60 + em;
+  if (endMin <= startMin) { alert("End time must be after start time. Two classes touching exactly at the boundary (e.g. one ending 6:00 PM, the next starting 6:00 PM) is fine — this just checks start is before end."); return; }
+  if (!subjectCode) { alert("Please enter a subject code."); return; }
+  const subject = subjectName ? `${subjectCode} - ${subjectName}` : subjectCode;
+  const slotStr = timeInputsToSlotStr(startStr, endStr);
+
+  if (room) {
+    const avail = getRoomAvailability(dayIdx, startMin, endMin, excludeIdentifier).find(r => r.name.toLowerCase() === room.toLowerCase());
+    if (avail && !avail.available) {
+      if (!confirm(`⚠️ ${room.toUpperCase()} is already booked by ${avail.conflict.sectionCode} (${avail.conflict.subject}) at ${avail.conflict.slotDisplay} on ${DAYS_CLEAN[dayIdx]}.\n\nAdd anyway?`)) return;
+    }
+  }
+
+  const tbody = document.getElementById("admin-edit-table-body");
+  let targetRow = null;
+  tbody.querySelectorAll("tr").forEach(tr => {
+    const r = getSlotRangeMinutes(tr.querySelector(".edit-slot-input")?.value || "");
+    if (r && r.startMin === startMin && r.endMin === endMin) targetRow = tr;
   });
-  results.innerHTML = html || `<p style="color:var(--text-muted);">No rooms found in schedule data.</p>`;
+  if (!targetRow) {
+    targetRow = window.addEditorRow();
+    targetRow.querySelector(".edit-slot-input").value = slotStr;
+    // Keep rows in chronological order after inserting a new time block.
+    const rows = Array.from(tbody.querySelectorAll("tr"));
+    rows.sort((a, b) => {
+      const ra = getSlotRangeMinutes(a.querySelector(".edit-slot-input")?.value || "");
+      const rb = getSlotRangeMinutes(b.querySelector(".edit-slot-input")?.value || "");
+      return (ra?.startMin ?? 0) - (rb?.startMin ?? 0);
+    });
+    rows.forEach(r => tbody.appendChild(r));
+  }
+  const dayCell = targetRow.querySelectorAll(".edit-day-cell")[dayIdx];
+  if (dayCell) {
+    dayCell.querySelector(".edit-sub-input").value = subject;
+    dayCell.querySelector(".edit-prof-input").value = teacher;
+    dayCell.querySelector(".edit-room-input").value = room;
+  }
+  document.getElementById("class-entry-popup")?.remove();
 };
 
 // ---- Manage Teachers / Subjects ----
 window.openManageTeachersModal = function () {
   const teacherMap = {};
-  sectionsData.forEach(sec => Object.values(sec.cells || {}).forEach(c => { if (c?.professor?.trim()) { const key = c.professor.trim(); teacherMap[key] = (teacherMap[key] || 0) + 1; } }));
-  const list = document.getElementById("manage-teachers-list");
-  const entries = Object.entries(teacherMap).sort((a, b) => a[0].localeCompare(b[0]));
-  list.innerHTML = entries.length ? entries.map(([name, count]) => `<div class="today-overview-item"><span>${name}</span><span style="color:var(--text-muted); font-size:0.8rem;">${count} class(es)</span></div>`).join('') : '<p style="color:var(--text-muted);">No teachers found.</p>';
-  document.getElementById("manage-teachers-modal-overlay").classList.add("open");
-};
-window.openManageSubjectsModal = function () {
-  const subjectMap = {};
-  sectionsData.forEach(sec => Object.values(sec.cells || {}).forEach(c => { const s = (c?.subject || c?.name || "").trim(); if (s) subjectMap[s] = (subjectMap[s] || 0) + 1; }));
-  const list = document.getElementById("manage-subjects-list");
-  const entries = Object.entries(subjectMap).sort((a, b) => a[0].localeCompare(b[0]));
-  list.innerHTML = entries.length ? entries.map(([name, count]) => `<div class="today-overview-item"><span>${name}</span><span style="color:var(--text-muted); font-size:0.8rem;">${count} section(s)</span></div>`).join('') : '<p style="color:var(--text-muted);">No subjects found.</p>';
-  document.getElementById("manage-subjects-modal-overlay").classList.add("open");
-};
-
-// ==========================================
-// INIT
-// ==========================================
-document.addEventListener("DOMContentLoaded", () => {
-  initTheme();
-  window.loadSchedules();
-  setupSessionFilters();
-  initSearchDropdown();
-  updateNotificationButtons();
-  renderBottomNav("home-view");
-  updateHamburgerContext("home-view");
-  document.getElementById("admin-section-search-input")?.addEventListener("input", renderAdminSections);
-  setInterval(() => { renderNextClassCard(); renderTeacherNextClassCard(); }, 30000);
-});
