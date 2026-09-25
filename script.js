@@ -1,7 +1,25 @@
 // SUPABASE CLIENT INITIALIZATION
+// Guarded: if the Supabase CDN script fails to load (flaky network, blocked
+// in an app WebView, offline first load, etc.), we used to throw here and
+// silently kill the ENTIRE script — meaning every button on the page (even
+// ones with nothing to do with Supabase) would stop responding, with no
+// visible error. Now we degrade gracefully instead: the rest of the app
+// still loads and all buttons still work, only actual data calls will fail
+// (and they already log to console / show alerts when that happens).
 const SUPABASE_URL = 'https://upjsmekxacecgnxxnkid.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_OQhsZ-6GUBqQq3FqcsQBSg_8FenNMwx';
-const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let db = null;
+if (typeof supabase === "undefined" || !supabase?.createClient) {
+  console.error("[AICSched] Supabase library did not load — check your internet connection or that the CDN <script> tag in index.html loaded before script.js. The app will still open, but schedule data won't load until this is fixed.");
+  window.addEventListener("DOMContentLoaded", () => {
+    const banner = document.createElement("div");
+    banner.style.cssText = "background:#dc2626; color:#fff; padding:10px 14px; text-align:center; font-weight:700; font-size:0.85rem; position:sticky; top:0; z-index:99999;";
+    banner.textContent = "⚠️ Could not load required library (Supabase). Check your internet connection and reload the app.";
+    document.body.prepend(banner);
+  });
+} else {
+  db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+}
 
 const DAYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY ODL"];
 const DAYS_CLEAN = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday ODL"];
@@ -1589,33 +1607,4 @@ window.commitClassEntry = function () {
     }
   }
 
-  const tbody = document.getElementById("admin-edit-table-body");
-  let targetRow = null;
-  tbody.querySelectorAll("tr").forEach(tr => {
-    const r = getSlotRangeMinutes(tr.querySelector(".edit-slot-input")?.value || "");
-    if (r && r.startMin === startMin && r.endMin === endMin) targetRow = tr;
-  });
-  if (!targetRow) {
-    targetRow = window.addEditorRow();
-    targetRow.querySelector(".edit-slot-input").value = slotStr;
-    // Keep rows in chronological order after inserting a new time block.
-    const rows = Array.from(tbody.querySelectorAll("tr"));
-    rows.sort((a, b) => {
-      const ra = getSlotRangeMinutes(a.querySelector(".edit-slot-input")?.value || "");
-      const rb = getSlotRangeMinutes(b.querySelector(".edit-slot-input")?.value || "");
-      return (ra?.startMin ?? 0) - (rb?.startMin ?? 0);
-    });
-    rows.forEach(r => tbody.appendChild(r));
-  }
-  const dayCell = targetRow.querySelectorAll(".edit-day-cell")[dayIdx];
-  if (dayCell) {
-    dayCell.querySelector(".edit-sub-input").value = subject;
-    dayCell.querySelector(".edit-prof-input").value = teacher;
-    dayCell.querySelector(".edit-room-input").value = room;
-  }
-  document.getElementById("class-entry-popup")?.remove();
-};
-
-// ---- Manage Teachers / Subjects ----
-window.openManageTeachersModal = function () {
-  const teacherMap = {};
+  const tbody = document.getElementById("admin-edit
