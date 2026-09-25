@@ -1607,4 +1607,63 @@ window.commitClassEntry = function () {
     }
   }
 
-  const tbody = document.getElementById("admin-edit
+  const tbody = document.getElementById("admin-edit-table-body");
+  let targetRow = null;
+  tbody.querySelectorAll("tr").forEach(tr => {
+    const r = getSlotRangeMinutes(tr.querySelector(".edit-slot-input")?.value || "");
+    if (r && r.startMin === startMin && r.endMin === endMin) targetRow = tr;
+  });
+  if (!targetRow) {
+    targetRow = window.addEditorRow();
+    targetRow.querySelector(".edit-slot-input").value = slotStr;
+    // Keep rows in chronological order after inserting a new time block.
+    const rows = Array.from(tbody.querySelectorAll("tr"));
+    rows.sort((a, b) => {
+      const ra = getSlotRangeMinutes(a.querySelector(".edit-slot-input")?.value || "");
+      const rb = getSlotRangeMinutes(b.querySelector(".edit-slot-input")?.value || "");
+      return (ra?.startMin ?? 0) - (rb?.startMin ?? 0);
+    });
+    rows.forEach(r => tbody.appendChild(r));
+  }
+  const dayCell = targetRow.querySelectorAll(".edit-day-cell")[dayIdx];
+  if (dayCell) {
+    dayCell.querySelector(".edit-sub-input").value = subject;
+    dayCell.querySelector(".edit-prof-input").value = teacher;
+    dayCell.querySelector(".edit-room-input").value = room;
+  }
+  document.getElementById("class-entry-popup")?.remove();
+};
+
+// ---- Manage Teachers / Subjects ----
+window.openManageTeachersModal = function () {
+  const teacherMap = {};
+  sectionsData.forEach(sec => Object.values(sec.cells || {}).forEach(c => { if (c?.professor?.trim()) { const key = c.professor.trim(); teacherMap[key] = (teacherMap[key] || 0) + 1; } }));
+  const list = document.getElementById("manage-teachers-list");
+  const entries = Object.entries(teacherMap).sort((a, b) => a[0].localeCompare(b[0]));
+  list.innerHTML = entries.length ? entries.map(([name, count]) => `<div class="today-overview-item"><span>${name}</span><span style="color:var(--text-muted); font-size:0.8rem;">${count} class(es)</span></div>`).join('') : '<p style="color:var(--text-muted);">No teachers found.</p>';
+  document.getElementById("manage-teachers-modal-overlay").classList.add("open");
+};
+window.openManageSubjectsModal = function () {
+  const subjectMap = {};
+  sectionsData.forEach(sec => Object.values(sec.cells || {}).forEach(c => { const s = (c?.subject || c?.name || "").trim(); if (s) subjectMap[s] = (subjectMap[s] || 0) + 1; }));
+  const list = document.getElementById("manage-subjects-list");
+  const entries = Object.entries(subjectMap).sort((a, b) => a[0].localeCompare(b[0]));
+  list.innerHTML = entries.length ? entries.map(([name, count]) => `<div class="today-overview-item"><span>${name}</span><span style="color:var(--text-muted); font-size:0.8rem;">${count} section(s)</span></div>`).join('') : '<p style="color:var(--text-muted);">No subjects found.</p>';
+  document.getElementById("manage-subjects-modal-overlay").classList.add("open");
+};
+
+// ==========================================
+// INIT
+// ==========================================
+document.addEventListener("DOMContentLoaded", () => {
+  initTheme();
+  loadRooms();
+  window.loadSchedules();
+  setupSessionFilters();
+  initSearchDropdown();
+  updateNotificationButtons();
+  renderBottomNav("home-view");
+  updateHamburgerContext("home-view");
+  document.getElementById("admin-section-search-input")?.addEventListener("input", renderAdminSections);
+  setInterval(() => { renderNextClassCard(); renderTeacherNextClassCard(); }, 30000);
+});
