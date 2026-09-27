@@ -36,6 +36,34 @@ jobs:
           npx cap add android || true
           npx cap sync android
 
+      - name: Set Firebase Push Notification Icon
+        # Firebase Cloud Messaging looks for its OWN icon reference in
+        # AndroidManifest.xml (separate from the LocalNotifications smallIcon
+        # setting in capacitor.config.json) — without it, push notifications
+        # fall back to a blank/placeholder icon in the status bar, which is
+        # likely the persistent white square. This points Firebase at the
+        # same custom icon generated in the next step.
+        run: |
+          python3 - <<'PYEOF'
+          import re
+          path = "android/app/src/main/AndroidManifest.xml"
+          with open(path) as f:
+              content = f.read()
+          if "com.google.firebase.messaging.default_notification_icon" not in content:
+              insertion = '\n        <meta-data android:name="com.google.firebase.messaging.default_notification_icon" android:resource="@drawable/ic_stat_icon_config_sample" />\n'
+              match = re.search(r"<application[^>]*>", content)
+              if match:
+                  idx = match.end()
+                  content = content[:idx] + insertion + content[idx:]
+                  with open(path, "w") as f:
+                      f.write(content)
+                  print("AndroidManifest.xml patched with Firebase default notification icon.")
+              else:
+                  print("WARNING: <application> tag not found — manifest not patched.")
+          else:
+              print("Firebase default notification icon meta-data already present.")
+          PYEOF
+
       - name: Generate Android App Icon and Splash Screen
         run: |
           mkdir -p resources
