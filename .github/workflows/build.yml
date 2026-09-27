@@ -29,12 +29,19 @@ jobs:
       - name: Prepare Web Folder
         run: |
           mkdir -p www
-          cp -r index.html script.js style.css manifest.json sw.js www/ 2>/dev/null || true
+          cp -r index.html script.js style.css manifest.json sw.js logo.png logo-192.png logo-512.png www/ 2>/dev/null || true
 
       - name: Add Android Platform and Sync
         run: |
           npx cap add android || true
           npx cap sync android
+
+      - name: Generate Android App Icon from Logo
+        run: |
+          mkdir -p resources
+          cp logo.png resources/icon.png
+          npm install -D @capacitor/assets
+          npx capacitor-assets generate --android
 
       - name: Inject google-services.json
         run: cp google-services.json android/app/
