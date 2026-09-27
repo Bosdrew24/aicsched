@@ -36,10 +36,11 @@ jobs:
           npx cap add android || true
           npx cap sync android
 
-      - name: Generate Android App Icon from Logo
+      - name: Generate Android App Icon and Splash Screen
         run: |
           mkdir -p resources
           cp logo.png resources/icon.png
+          cp splash.png resources/splash.png
           npm install -D @capacitor/assets
           npx capacitor-assets generate --android
 
