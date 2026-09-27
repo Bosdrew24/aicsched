@@ -43,6 +43,32 @@ jobs:
           npm install -D @capacitor/assets
           npx capacitor-assets generate --android
 
+      - name: Generate Notification Status-Bar Icon
+        # Capacitor scaffolds android/ with its own placeholder notification
+        # icon (ic_stat_icon_config_sample) — the plain white square seen in
+        # the status bar. Android notification icons must be a white
+        # silhouette on transparent (the OS ignores color, using only the
+        # alpha channel as a mask), so this derives one from the real logo
+        # and overwrites that placeholder at every density.
+        run: |
+          pip install --quiet pillow
+          python3 - <<'PYEOF'
+          from PIL import Image
+          import os
+          src = Image.open("logo.png").convert("RGBA")
+          alpha = src.split()[-1]
+          silhouette = Image.new("RGBA", src.size, (255, 255, 255, 0))
+          silhouette.putalpha(alpha)
+          sizes = {"mdpi": 24, "hdpi": 36, "xhdpi": 48, "xxhdpi": 72, "xxxhdpi": 96}
+          for density, px in sizes.items():
+              folder = f"android/app/src/main/res/drawable-{density}"
+              os.makedirs(folder, exist_ok=True)
+              silhouette.resize((px, px), Image.LANCZOS).save(f"{folder}/ic_stat_icon_config_sample.png")
+          os.makedirs("android/app/src/main/res/drawable", exist_ok=True)
+          silhouette.resize((48, 48), Image.LANCZOS).save("android/app/src/main/res/drawable/ic_stat_icon_config_sample.png")
+          print("Notification icon generated.")
+          PYEOF
+
       - name: Inject google-services.json
         run: cp google-services.json android/app/
 
