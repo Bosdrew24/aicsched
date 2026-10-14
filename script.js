@@ -1476,36 +1476,10 @@ async function refreshNotificationBadge() {
 // ==========================================
 // ADMIN DASHBOARD
 // ==========================================
-// A multi-hour class may still be stored as several hourly rows (older data
-// saved before entries were merged into one row, or rows added manually one
-// at a time). Counting raw cells would report a 4-hour class as 4 "classes",
-// so count distinct back-to-back class blocks per day instead — same logic
-// as mergeConsecutiveClassItems, just applied across the whole week rather
-// than just today.
-function countDistinctClasses(sec) {
-  if (!sec.cells || !sec.slots) return 0;
-  let total = 0;
-  for (let dayIdx = 0; dayIdx < DAYS.length; dayIdx++) {
-    const dayItems = [];
-    Object.keys(sec.cells).forEach(key => {
-      const [rStr, cStr] = key.split("-");
-      if (parseInt(cStr, 10) !== dayIdx) return;
-      const cell = sec.cells[key];
-      if (!cell) return;
-      const range = getSlotRangeMinutes(sec.slots[parseInt(rStr, 10)]);
-      if (!range) return;
-      dayItems.push({ ...cell, startMin: range.startMin, endMin: range.endMin });
-    });
-    if (dayItems.length) total += mergeConsecutiveClassItems(dayItems).length;
-  }
-  return total;
-}
 async function renderAdminDashboard() {
   const totalSections = sectionsData.length;
   const teacherSet = new Set(), subjectSet = new Set(), roomSet = new Set();
-  let totalClasses = 0;
   sectionsData.forEach(sec => {
-    totalClasses += countDistinctClasses(sec);
     Object.values(sec.cells || {}).forEach(c => {
       if (!c) return;
       if (c.professor?.trim()) teacherSet.add(c.professor.trim());
@@ -1531,7 +1505,6 @@ async function renderAdminDashboard() {
       <div class="summary-card"><span class="num">${teacherSet.size}</span><span class="label">Teachers</span></div>
       <div class="summary-card"><span class="num">${subjectSet.size}</span><span class="label">Subjects</span></div>
       <div class="summary-card"><span class="num">${roomSet.size}</span><span class="label">Rooms</span></div>
-      <div class="summary-card"><span class="num">${totalClasses}</span><span class="label">Scheduled Classes</span></div>
       <div class="summary-card ${conflicts.length > 0 ? 'danger' : ''}"><span class="num">${conflicts.length}</span><span class="label">Active Conflicts</span></div>
       <div class="summary-card ${pendingReports > 0 ? 'danger' : ''}"><span class="num">${pendingReports}</span><span class="label">Pending Reports</span></div>
     `;
@@ -2098,7 +2071,11 @@ window.downloadExportedImage = async function () {
       alert("Saved to your gallery.");
     } catch (err) {
       console.error("Native gallery save failed:", err);
-      alert("Could not save the image to your gallery. Please try again.");
+      // Show the plugin's actual error instead of a generic message, so a
+      // failure is diagnosable from the phone alone (no computer/devtools
+      // needed) — the plugin reports one of: accessDenied, argumentError,
+      // downloadError, filesystemError.
+      alert("Could not save the image.\n\nDetails: " + (err?.message || err?.code || JSON.stringify(err) || "unknown error"));
     }
     return;
   }
